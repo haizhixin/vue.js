@@ -16,6 +16,8 @@ import { unicodeRegExp } from 'core/util/lang'
 // Regular Expressions for parsing tags and attributes
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
+
+//source属性 返回用于返回模式匹配所用到的文本，不包括正则表达式直接量使用的界定符 也不包括 g m i 
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
@@ -186,11 +188,13 @@ export function parseHTML (html, options) {
 
   function parseStartTag () {
     const start = html.match(startTagOpen)
+    // match如果匹配不到就返回null 匹配到 match==["<div","div",index:0,input:"<div></div>"]
+    // 它匹配的是开始标签的一部分 不包括 属性 和结尾
     if (start) {
       const match = {
-        tagName: start[1],
+        tagName: start[1], //标签名
         attrs: [],
-        start: index
+        start: index // 开始位置
       }
       advance(start[0].length)
       let end, attr
