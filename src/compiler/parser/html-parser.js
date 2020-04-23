@@ -9,12 +9,26 @@
  * http://erik.eae.net/simplehtmlparser/simplehtmlparser.js
  */
 
-import { makeMap, no } from 'shared/util'
-import { isNonPhrasingTag } from 'web/compiler/util'
-import { unicodeRegExp } from 'core/util/lang'
+import {
+  makeMap,
+  no
+} from 'shared/util'
+import {
+  isNonPhrasingTag
+} from 'web/compiler/util'
+import {
+  unicodeRegExp
+} from 'core/util/lang'
 
 // Regular Expressions for parsing tags and attributes
+// \s 匹配空格 *匹配0个以上 . 匹配单个字符除了回车符\r 和换行符\n
+// + 至少匹配一个
+// ? 没有或者一个
+// ()捕获和分组 这部分匹配到的结果会作为一个分组返回出来https://juejin.im/post/5aa797076fb9a028dc40b164
+// []中的^ 是非得意思 匹配非[]中的字符
+//[^\/]  “表示后面紧非 / 的字符。
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
+
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
@@ -35,8 +49,8 @@ const decodingMap = {
   '&gt;': '>',
   '&quot;': '"',
   '&amp;': '&',
-  '&#10;': '\n',
-  '&#9;': '\t',
+  '&#10;': '\n', //换行符
+  '&#9;': '\t', // Tab的下一个指定位置 制表符
   '&#39;': "'"
 }
 const encodedAttr = /&(?:lt|gt|quot|amp|#39);/g
@@ -46,12 +60,12 @@ const encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#39|#10|#9);/g
 const isIgnoreNewlineTag = makeMap('pre,textarea', true)
 const shouldIgnoreFirstNewline = (tag, html) => tag && isIgnoreNewlineTag(tag) && html[0] === '\n'
 
-function decodeAttr (value, shouldDecodeNewlines) {
+function decodeAttr(value, shouldDecodeNewlines) {
   const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr
   return value.replace(re, match => decodingMap[match])
 }
 
-export function parseHTML (html, options) {
+export function parseHTML(html, options) {
   const stack = []
   const expectHTML = options.expectHTML
   const isUnaryTag = options.isUnaryTag || no
@@ -170,7 +184,9 @@ export function parseHTML (html, options) {
     if (html === last) {
       options.chars && options.chars(html)
       if (process.env.NODE_ENV !== 'production' && !stack.length && options.warn) {
-        options.warn(`Mal-formatted tag at end of template: "${html}"`, { start: index + html.length })
+        options.warn(`Mal-formatted tag at end of template: "${html}"`, {
+          start: index + html.length
+        })
       }
       break
     }
@@ -179,12 +195,12 @@ export function parseHTML (html, options) {
   // Clean up any remaining tags
   parseEndTag()
 
-  function advance (n) {
+  function advance(n) {
     index += n
     html = html.substring(n)
   }
 
-  function parseStartTag () {
+  function parseStartTag() {
     const start = html.match(startTagOpen)
     if (start) {
       const match = {
@@ -209,7 +225,7 @@ export function parseHTML (html, options) {
     }
   }
 
-  function handleStartTag (match) {
+  function handleStartTag(match) {
     const tagName = match.tagName
     const unarySlash = match.unarySlash
 
@@ -229,9 +245,9 @@ export function parseHTML (html, options) {
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
       const value = args[3] || args[4] || args[5] || ''
-      const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href'
-        ? options.shouldDecodeNewlinesForHref
-        : options.shouldDecodeNewlines
+      const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href' ?
+        options.shouldDecodeNewlinesForHref :
+        options.shouldDecodeNewlines
       attrs[i] = {
         name: args[1],
         value: decodeAttr(value, shouldDecodeNewlines)
@@ -243,7 +259,13 @@ export function parseHTML (html, options) {
     }
 
     if (!unary) {
-      stack.push({ tag: tagName, lowerCasedTag: tagName.toLowerCase(), attrs: attrs, start: match.start, end: match.end })
+      stack.push({
+        tag: tagName,
+        lowerCasedTag: tagName.toLowerCase(),
+        attrs: attrs,
+        start: match.start,
+        end: match.end
+      })
       lastTag = tagName
     }
 
@@ -252,7 +274,7 @@ export function parseHTML (html, options) {
     }
   }
 
-  function parseEndTag (tagName, start, end) {
+  function parseEndTag(tagName, start, end) {
     let pos, lowerCasedTagName
     if (start == null) start = index
     if (end == null) end = index
@@ -278,8 +300,10 @@ export function parseHTML (html, options) {
           options.warn
         ) {
           options.warn(
-            `tag <${stack[i].tag}> has no matching end tag.`,
-            { start: stack[i].start, end: stack[i].end }
+            `tag <${stack[i].tag}> has no matching end tag.`, {
+              start: stack[i].start,
+              end: stack[i].end
+            }
           )
         }
         if (options.end) {
