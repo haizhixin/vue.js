@@ -27,14 +27,18 @@ import {
 // ()捕获和分组 这部分匹配到的结果会作为一个分组返回出来https://juejin.im/post/5aa797076fb9a028dc40b164
 // []中的^ 是非得意思 匹配非[]中的字符
 //[^\/]  “表示后面紧非 / 的字符。
+// 匹配普通标签属性
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 
+// 匹配动态标签属性
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 
 //source属性 返回用于返回模式匹配所用到的文本，不包括正则表达式直接量使用的界定符 也不包括 g m i 
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
 const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+// 开始标签的开头部分
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
+// 开始标签的结尾部分 > 或者/>自闭合标签
 const startTagClose = /^\s*(\/?)>/
 const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
 const doctype = /^<!DOCTYPE [^>]+>/i
@@ -85,9 +89,12 @@ export function parseHTML(html, options) {
           const commentEnd = html.indexOf('-->')
 
           if (commentEnd >= 0) {
+            // 注释的钩子函数可以通过选项来配置只有options.shouldKeepComment为真是才会触发注释的钩子函数
+            // 否则只截取字符串
             if (options.shouldKeepComment) {
               options.comment(html.substring(4, commentEnd), index, index + commentEnd + 3)
             }
+            // 截取字符串
             advance(commentEnd + 3)
             continue
           }
@@ -111,17 +118,31 @@ export function parseHTML(html, options) {
         }
 
         // End tag:
+        // 匹配结束标签
         const endTagMatch = html.match(endTag)
         if (endTagMatch) {
+          // 如果有匹配值做两件事  
           const curIndex = index
+          //一截取模版
           advance(endTagMatch[0].length)
+          //二,触发钩子函数
           parseEndTag(endTagMatch[1], curIndex, index)
           continue
         }
 
         // Start tag:
+        // 判断剩余模版是否符合开始标签的规则只需要调用 parseStartTag(),它会解析开始标签如果返回undefine则说明它不符合开始标签的规则
+        // 如果有返回结果 把解析出来的结果取出并调用开始标签的钩子函数
         const startTagMatch = parseStartTag()
+        // 如果startTagMatch有返回值即为形式如下
+        // {
+        //   tagName:"div",
+        //   attrs:[[
+        //     ' class="box"', 'class', '=' null,null,null],
+        //   ],[' id="el"','id','=','el',null,null]]
+        // }
         if (startTagMatch) {
+          // handleStartTag函数的目的是把tagName attrs unary等数据取出然后调用钩子函数将这些数据放到参数中
           handleStartTag(startTagMatch)
           if (shouldIgnoreFirstNewline(startTagMatch.tagName, html)) {
             advance(1)
@@ -202,8 +223,12 @@ export function parseHTML(html, options) {
     html = html.substring(n)
   }
 
+
+  // 截取开始标签,并解析其属性以及自闭合标签
+  // 开始标签包括标签名,属性和结尾
   function parseStartTag() {
     const start = html.match(startTagOpen)
+
     // match如果匹配不到就返回null 匹配到 match==["<div","div",index:0,input:"<div></div>"]
     // 它匹配的是开始标签的一部分 不包括 属性 和结尾
     if (start) {
@@ -213,16 +238,24 @@ export function parseHTML(html, options) {
         start: index // 开始位置
       }
       advance(start[0].length)
+      // 截取开始标签后 html就是这样的形式:' class="box" id="el"></div>'
       let end, attr
+      //  不符合开始标签的结尾部分 且符合标签属性的特征
       while (!(end = html.match(startTagClose)) && (attr = html.match(dynamicArgAttribute) || html.match(attribute))) {
+        // 记录属性在html中的开始位置
         attr.start = index
         advance(attr[0].length)
+        // 记录属性在html中的结束位置
         attr.end = index
         match.attrs.push(attr)
       }
+      // 解析完标签属性后 目前模板是'></div>' 或者/>自闭合标签
+      // 匹配到标签的结尾部分
       if (end) {
+        // 如果匹配到自闭合标签end[1]为 正则表达式中（）的分组项 / 匹配不上为""
         match.unarySlash = end[1]
         advance(end[0].length)
+        // 标记结束位置
         match.end = index
         return match
       }
