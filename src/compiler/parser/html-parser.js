@@ -70,6 +70,8 @@ const shouldIgnoreFirstNewline = (tag, html) => tag && isIgnoreNewlineTag(tag) &
 
 function decodeAttr(value, shouldDecodeNewlines) {
   const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr
+  // replace() 替换 第一个参数可以是一个正则表达式 第二个参数可以是一个函数
+  // 参数 函数会对每一个匹配到的match进行处理 然后你可以将结果return 出来
   return value.replace(re, match => decodingMap[match])
 }
 
@@ -267,11 +269,14 @@ export function parseHTML(html, options) {
     }
   }
 
+  
   function handleStartTag(match) {
+    // 开始标签的匹配结果,匹配成功之后返回match对象
     const tagName = match.tagName
     const unarySlash = match.unarySlash
-
+     
     if (expectHTML) {
+      // 段落式元素
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
         parseEndTag(lastTag)
       }
@@ -280,19 +285,43 @@ export function parseHTML(html, options) {
       }
     }
 
-    const unary = isUnaryTag(tagName) || !!unarySlash
 
+       // 如果startTagMatch有返回值即为形式如下
+        // {
+        //   tagName:"div",
+        //   attrs:[[
+        //     ' class="box"', 'class', '=' null,null,null],
+        //   ],[' id="el"','id','=','el',null,null]]
+        // }
+
+   // unary为true 自闭合标签 为false为二元标签
+    const unary = isUnaryTag(tagName) || !!unarySlash
+    
+    // 存储开始标签的attrs的长度
     const l = match.attrs.length
     const attrs = new Array(l)
+    // for循环的作用 格式化match中的attrs数组
     for (let i = 0; i < l; i++) {
       const args = match.attrs[i]
+      // match中的attrs数组元素格式 [
+// 如下
+//   ' v-if="isSucceed"',
+//   'v-if',
+//   '=',
+//   'isSucceed',
+//   undefined,
+//   undefined
+// ]// 第 456项之一有可能会包含属性值 如果没有属性值则默认空字符串
       const value = args[3] || args[4] || args[5] || ''
+
+      // shouldDecodeNewLines为true vue模版编译要对属性中换行符或制表符进行兼容处理
+      // shouldDecodeNewLinesForHref vue模版编译要对a标签的href属性中的换行符和制表符进行兼容处理
       const shouldDecodeNewlines = tagName === 'a' && args[1] === 'href' ?
         options.shouldDecodeNewlinesForHref :
         options.shouldDecodeNewlines
       attrs[i] = {
-        name: args[1],
-        value: decodeAttr(value, shouldDecodeNewlines)
+        name: args[1],// 属性名
+        value: decodeAttr(value, shouldDecodeNewlines) // 属性值并对其进行html实体解码
       }
       if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
         attrs[i].start = args.start + args[0].match(/^\s*/).length

@@ -2,6 +2,7 @@
 
 import { makeMap } from 'shared/util'
 
+// 检测给定的标签是否是自闭合标签
 export const isUnaryTag = makeMap(
   'area,base,br,col,embed,frame,hr,img,input,isindex,keygen,' +
   'link,meta,param,source,track,wbr'
