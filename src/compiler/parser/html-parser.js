@@ -44,6 +44,8 @@ const endTag = new RegExp(`^<\\/${qnameCapture}[^>]*>`)
 const doctype = /^<!DOCTYPE [^>]+>/i
 // #7298: escape - to avoid being passed as HTML comment when inlined in page
 const comment = /^<!\--/
+
+// <!--[if IE]> html代码 <![endif]--> //条件注释分两部分 第一部分为普通注释,第二部分为条件注释
 const conditionalComment = /^<!\[/
 
 // Special Elements (can contain anything)
@@ -90,6 +92,7 @@ export function parseHTML(html, options) {
 
           if (commentEnd >= 0) {
             // 注释的钩子函数可以通过选项来配置只有options.shouldKeepComment为真是才会触发注释的钩子函数
+            // 默认情况下 comments 选项的值为 false ，即不保留注释，假如将其设置为 true ，则当解析器遇到注释节点时会保留该注释节点
             // 否则只截取字符串
             if (options.shouldKeepComment) {
               options.comment(html.substring(4, commentEnd), index, index + commentEnd + 3)
@@ -101,6 +104,7 @@ export function parseHTML(html, options) {
         }
 
         // http://en.wikipedia.org/wiki/Conditional_comment#Downlevel-revealed_conditional_comment
+        // 条件注释不需要触发钩子函数 只需要把它截取掉
         if (conditionalComment.test(html)) {
           const conditionalEnd = html.indexOf(']>')
 
@@ -111,6 +115,7 @@ export function parseHTML(html, options) {
         }
 
         // Doctype:
+        // 不需要触发钩子函数 只需要将匹配到这一段字符串截取掉即可，根据匹配到的字符的length属性来决定要截取多长的字符串
         const doctypeMatch = html.match(doctype)
         if (doctypeMatch) {
           advance(doctypeMatch[0].length)
