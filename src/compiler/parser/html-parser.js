@@ -68,6 +68,7 @@ const encodedAttrWithNewLines = /&(?:lt|gt|quot|amp|#39|#10|#9);/g
 const isIgnoreNewlineTag = makeMap('pre,textarea', true)
 const shouldIgnoreFirstNewline = (tag, html) => tag && isIgnoreNewlineTag(tag) && html[0] === '\n'
 
+// 解码HTML实体
 function decodeAttr(value, shouldDecodeNewlines) {
   const re = shouldDecodeNewlines ? encodedAttrWithNewLines : encodedAttr
   // replace() 替换 第一个参数可以是一个正则表达式 第二个参数可以是一个函数
@@ -132,7 +133,7 @@ export function parseHTML(html, options) {
           const curIndex = index
           //一截取模版
           advance(endTagMatch[0].length)
-          //二,触发钩子函数
+          //二,触发钩子函数 参数为标签名 以及结束标签在原html中的开始和结束位置
           parseEndTag(endTagMatch[1], curIndex, index)
           continue
         }
@@ -328,7 +329,8 @@ export function parseHTML(html, options) {
         attrs[i].end = args.end
       }
     }
-
+    
+    // 当开始标签不是自闭合标签时 将开始标签入栈,目的使用栈维护DOM层级
     if (!unary) {
       stack.push({
         tag: tagName,
@@ -337,14 +339,27 @@ export function parseHTML(html, options) {
         start: match.start,
         end: match.end
       })
+      // 把tagName赋值给 lastTag lastTag储存的标签名始终保存着栈顶的元素
       lastTag = tagName
     }
 
+     // 如果parse选项中存在start钩子函数
+     // 把标签名 格式化后的属性名, 是否是自闭合标签 开始标签在原html中的开始或者结束位置
     if (options.start) {
       options.start(tagName, attrs, unary, match.start, match.end)
     }
   }
 
+   
+  // 处理结束标签 一，当非闭合标签缺少结束如</div>时 给警告提示
+  // 二,解析完毕栈非空,处理stack栈中剩余未被处理的标签
+  // 三,解析</br>或者其他标签和</p> 保持和浏览器行为一致
+  // 如果只写结束标签浏览器 会把</br>解析为<br> 把 </p>解析为<p></p> 会忽略其他标签
+ 
+  // parseEndTag根据调用参数不同 分别处理对应的情况
+  // 一,处理普通的结束标签 三个参数都传
+  // 二,只传一个lastTag参数
+  // 三,不传参数 处理stack中剩余未处理的标签
   function parseEndTag(tagName, start, end) {
     let pos, lowerCasedTagName
     if (start == null) start = index
