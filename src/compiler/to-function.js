@@ -18,6 +18,7 @@ function createFunction (code, errors) {
   }
 }
 
+// crateCompileToFunctionFn返回一个compileToFunctions函数
 export function createCompileToFunctionFn (compile: Function): Function {
   const cache = Object.create(null)
 
