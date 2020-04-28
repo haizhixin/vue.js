@@ -8,7 +8,9 @@ import { createCompilerCreator } from './create-compiler'
 // `createCompilerCreator` allows creating compilers that use alternative
 // parser/optimizer/codegen, e.g the SSR optimizing compiler.
 // Here we just export a default compiler using the default parts.
-export const createCompiler = createCompilerCreator(function baseCompile (
+// createCompiler创建一个编译器  createCompilerCreator创建一个编译器的创建者
+export const createCompiler = createCompilerCreator(
+  function baseCompile (
   template: string,
   options: CompilerOptions
 ): CompiledResult {
@@ -22,4 +24,5 @@ export const createCompiler = createCompilerCreator(function baseCompile (
     render: code.render,
     staticRenderFns: code.staticRenderFns
   }
-})
+}
+)

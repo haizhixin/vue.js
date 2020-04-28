@@ -6,6 +6,7 @@ import { createCompileToFunctionFn } from './to-function'
 
 export function createCompilerCreator (baseCompile: Function): Function {
   return function createCompiler (baseOptions: CompilerOptions) {
+    // 定义了compile函数 
     function compile (
       template: string,
       options?: CompilerOptions
@@ -67,6 +68,7 @@ export function createCompilerCreator (baseCompile: Function): Function {
       return compiled
     }
 
+    //返回一个对象 包含 compile函数本身和compileToFunctions函数
     return {
       compile,
       compileToFunctions: createCompileToFunctionFn(compile)
