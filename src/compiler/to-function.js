@@ -27,17 +27,27 @@ export function createCompileToFunctionFn (compile: Function): Function {
     options?: CompilerOptions,
     vm?: Component
   ): CompiledFunctionResult {
+
+
+    // 将options合并到新对象并重新赋值给 options
     options = extend({}, options)
+    // 定义warn常量
     const warn = options.warn || baseWarn
+    // 最后将options.warn移除
     delete options.warn
 
     /* istanbul ignore if */
+    // 将模板字符串编译成渲染函数依赖new Function
+    // 检测new Function()函数是否可用,在某些情况下会给一个有用的提示
     if (process.env.NODE_ENV !== 'production') {
       // detect possible CSP restriction
       try {
+        // 对new Function()进行错误捕获
         new Function('return 1')
       } catch (e) {
+        // CSP内容安全策略
         if (e.toString().match(/unsafe-eval|CSP/)) {
+          // 如果错误信息包含 unsafe-eval或者CSP给警告提示
           warn(
             'It seems you are using the standalone build of Vue.js in an ' +
             'environment with Content Security Policy that prohibits unsafe-eval. ' +
@@ -47,13 +57,19 @@ export function createCompileToFunctionFn (compile: Function): Function {
           )
         }
       }
+      //解决方案
+      // 1,预编译
+      // 2,放宽你的CSP策略
     }
 
     // check cache
+    // delimiters是一个数组,如果options.delimiters存在
+    // 将其转化为字符串然后和template拼接在一块 然后作为key值
     const key = options.delimiters
       ? String(options.delimiters) + template
       : template
     if (cache[key]) {
+      // 缓存字符串模板的编译结果  防止重复编译造成性能上的浪费
       return cache[key]
     }
 
