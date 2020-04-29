@@ -5,14 +5,18 @@ import { warn as baseWarn, tip } from 'core/util/debug'
 import { generateCodeFrame } from './codeframe'
 
 type CompiledFunctionResult = {
-  render: Function;
-  staticRenderFns: Array<Function>;
+  render: Function;// 真正渲染函数
+  staticRenderFns: Array<Function>;// 真正的优化渲染函数
 };
 
+// 第一个参数为函数体字符串 第二个参数是一个数组
+// code字符串将通过new Function()创建为函数
+// errors的作用是当采用new Function()创建函数发生错误时 用来收集错误
 function createFunction (code, errors) {
   try {
     return new Function(code)
   } catch (err) {
+
     errors.push({ err, code })
     return noop
   }
@@ -83,6 +87,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
     // compile对象 包含两个属性 errors tips 均为数组 包含了模版编译过程中的错误和提示信息
 
     // check compilation errors/tips
+    // 检测模版编译成渲染函数字符串阶段时的错误
     if (process.env.NODE_ENV !== 'production') {
       // 如果有错误信息
       if (compiled.errors && compiled.errors.length) {
@@ -116,7 +121,10 @@ export function createCompileToFunctionFn (compile: Function): Function {
     const res = {}// 定义一个空对象也是最终的返回值
     const fnGenErrors = []//定义一个空数组 
     // 在res对象上添加一个render函数
+    // render就是最终的渲染函数 通过createFunction函数创建出来
+    // render和staticRenderFns分别是一个字符串和字符串数组
     res.render = createFunction(compiled.render, fnGenErrors)
+    // staticRenderFns是一个渲染函数优化
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
     })
@@ -125,7 +133,9 @@ export function createCompileToFunctionFn (compile: Function): Function {
     // this should only happen if there is a bug in the compiler itself.
     // mostly for codegen development use
     /* istanbul ignore if */
+    // 用来打印在生成渲染函数过程中的错误
     if (process.env.NODE_ENV !== 'production') {
+      // 当不存在模版编译中的错误 且是生成渲染函数时产生的错误
       if ((!compiled.errors || !compiled.errors.length) && fnGenErrors.length) {
         warn(
           `Failed to generate render function:\n\n` +

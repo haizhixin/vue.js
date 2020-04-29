@@ -31,6 +31,7 @@ export const isSVG = makeMap(
   true
 )
 
+// 通过给定的标签名字检查是否是 pre标签
 export const isPreTag = (tag: ?string): boolean => tag === 'pre'
 
 export const isReservedTag = (tag: string): ?boolean => {
