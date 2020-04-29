@@ -20,6 +20,8 @@ function createFunction (code, errors) {
 
 // crateCompileToFunctionFn返回一个compileToFunctions函数
 export function createCompileToFunctionFn (compile: Function): Function {
+ 
+  // 创建一个不含原型链的空对象用于储存缓存想信息
   const cache = Object.create(null)
 
   return function compileToFunctions (
@@ -74,10 +76,15 @@ export function createCompileToFunctionFn (compile: Function): Function {
     }
 
     // compile
+    // compile通过闭包引用来自createCompileToFunctionFn
+    // 真正的编译工作最终依托于compile
+    // compile函数执行后最终会返回一个compiled对象
     const compiled = compile(template, options)
+    // compile对象 包含两个属性 errors tips 均为数组 包含了模版编译过程中的错误和提示信息
 
     // check compilation errors/tips
     if (process.env.NODE_ENV !== 'production') {
+      // 如果有错误信息
       if (compiled.errors && compiled.errors.length) {
         if (options.outputSourceRange) {
           compiled.errors.forEach(e => {
@@ -95,6 +102,7 @@ export function createCompileToFunctionFn (compile: Function): Function {
           )
         }
       }
+      // 如果有提示信息
       if (compiled.tips && compiled.tips.length) {
         if (options.outputSourceRange) {
           compiled.tips.forEach(e => tip(e.msg, vm))
@@ -105,8 +113,9 @@ export function createCompileToFunctionFn (compile: Function): Function {
     }
 
     // turn code into functions
-    const res = {}
-    const fnGenErrors = []
+    const res = {}// 定义一个空对象也是最终的返回值
+    const fnGenErrors = []//定义一个空数组 
+    // 在res对象上添加一个render函数
     res.render = createFunction(compiled.render, fnGenErrors)
     res.staticRenderFns = compiled.staticRenderFns.map(code => {
       return createFunction(code, fnGenErrors)
@@ -125,7 +134,8 @@ export function createCompileToFunctionFn (compile: Function): Function {
         )
       }
     }
-
+    
+    // 返回编译结果的同时将其缓存 这样发现下一次cache中有相同的key不需要再次编译 就直接返回缓存结果
     return (cache[key] = res)
   }
 }
