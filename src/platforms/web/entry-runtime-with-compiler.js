@@ -69,12 +69,14 @@ Vue.prototype.$mount = function (
         mark('compile')
       }
 
+      // compileToFunctions函数会把模版字符串编译成渲染函数
+      // compileToFunctions函数的第一个参数是模板字符串 第二个参数是一些选项
       const { render, staticRenderFns } = compileToFunctions(template, {
         outputSourceRange: process.env.NODE_ENV !== 'production',
-        shouldDecodeNewlines,
-        shouldDecodeNewlinesForHref,
-        delimiters: options.delimiters,
-        comments: options.comments
+        shouldDecodeNewlines,// vue模版编译中要对属性值中的换行符和制表符做兼容处理
+        shouldDecodeNewlinesForHref,//vue模版编译中要对a标签的href属性中的换行符和制表符做兼容处理
+        delimiters: options.delimiters,//改变纯文本插入分割符 只在完整构建版本中的浏览器内编译时可用
+        comments: options.comments//当为true时会渲染模版中的html注释,默认是舍弃 只在完整构建版本中的浏览器内编译时可用
       }, this)
       options.render = render
       options.staticRenderFns = staticRenderFns

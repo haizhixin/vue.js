@@ -29,13 +29,25 @@ import {
 //[^\/]  “表示后面紧非 / 的字符。
 // 匹配普通标签属性
 const attribute = /^\s*([^\s"'<>\/=]+)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
+// attribute 一共有5个捕获分组
+// [
+//   'class="some-class"',
+//   'class',
+//   '=',
+//   'some-class',
+//   undefined,
+//   undefined
+// ]
+// 从0-5一共有6个元素 第0个元素代表整个的正则匹配结果
+// 1-5分别对应 5个捕获分组
 
 // 匹配动态标签属性
 const dynamicArgAttribute = /^\s*((?:v-[\w-]+:|@|:|#)\[[^=]+\][^\s"'<>\/=]*)(?:\s*(=)\s*(?:"([^"]*)"+|'([^']*)'+|([^\s"'=<>`]+)))?/
 
 //source属性 返回用于返回模式匹配所用到的文本，不包括正则表达式直接量使用的界定符 也不包括 g m i
+// ncname不带:号的XML 以字母或下划线开头 后面可以跟任意数量的中横线 数字 点 字母下划线等字符
 const ncname = `[a-zA-Z_][\\-\\.0-9_a-zA-Z${unicodeRegExp.source}]*`
-const qnameCapture = `((?:${ncname}\\:)?${ncname})`
+const qnameCapture = `((?:${ncname}\\:) ?${ncname})`
 // 开始标签的开头部分
 const startTagOpen = new RegExp(`^<${qnameCapture}`)
 // 开始标签的结尾部分 > 或者/>自闭合标签
@@ -269,9 +281,15 @@ export function parseHTML(html, options) {
     const unarySlash = match.unarySlash
 
     if (expectHTML) {
+      // 段落式元素
+      // 最近一次遇到的开始标签即 栈顶元素是p标签
+      // 并且当前正在解析的开始标签不能是段落式标签 因为p标签只允许包含段落式内容模型
+      // <p><h2></h2></p>会被解析成<p></p><h2></h2><p></p>
+      // h2不是段落式内容 会立即调用闭合函数关闭标签
       if (lastTag === 'p' && isNonPhrasingTag(tagName)) {
         parseEndTag(lastTag)
       }
+      // 如果遇到的是一个可以省略闭合标签的元素且下次遇到的标签也是这个标签时 直接调用闭合函数关闭标签
       if (canBeLeftOpenTag(tagName) && lastTag === tagName) {
         parseEndTag(tagName)
       }
@@ -314,26 +332,37 @@ export function parseHTML(html, options) {
   }
 
   function parseEndTag(tagName, start, end) {
+    // pos用于判断html字符串是否缺少结束标签
+    // lowerCasedTagName用于存储tagName的小写版
     let pos, lowerCasedTagName
+    // 如果start和end不存在把这个值设置为当前字符流的读入位置
     if (start == null) start = index
     if (end == null) end = index
 
     // Find the closest opened tag of the same type
     if (tagName) {
+      // 如果标签存在把 标签的小写版存入lowerCasedTagName
       lowerCasedTagName = tagName.toLowerCase()
+      // 循环栈 找出与结束标签对应的开始标签在栈中的位置
       for (pos = stack.length - 1; pos >= 0; pos--) {
         if (stack[pos].lowerCasedTag === lowerCasedTagName) {
           break
         }
+        // 当在栈中找不到与结束标签对应的开始标签 pos会为-1
       }
     } else {
+      // 没有结束标签为0
       // If no tag name is provided, clean shop
       pos = 0
     }
 
+
     if (pos >= 0) {
       // Close all the open elements, up the stack
       for (let i = stack.length - 1; i >= pos; i--) {
+
+        // 当pos=0时 i>pos会始终成立 这个时候stack栈中如果有剩余未处理的标签会逐一警告
+        // 并调用options.end将其闭合
         if (process.env.NODE_ENV !== 'production' &&
           (i > pos || !tagName) &&
           options.warn
@@ -353,11 +382,15 @@ export function parseHTML(html, options) {
       // Remove the open elements from the stack
       stack.length = pos
       lastTag = pos && stack[pos - 1].tag
+
+      //pos为-1小于0 即只有结束标签
     } else if (lowerCasedTagName === 'br') {
+      // 对于</br>标签会解析为正常的<br>
       if (options.start) {
         options.start(tagName, [], true, start, end)
       }
     } else if (lowerCasedTagName === 'p') {
+      // 对于</p>标签会解析为正常的<p>
       if (options.start) {
         options.start(tagName, [], false, start, end)
       }
@@ -365,5 +398,6 @@ export function parseHTML(html, options) {
         options.end(tagName, start, end)
       }
     }
+    // 对于其他标签会忽略 所以vue的parse与浏览器行为一致
   }
 }

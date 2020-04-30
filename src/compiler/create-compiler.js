@@ -6,10 +6,14 @@ import { createCompileToFunctionFn } from './to-function'
 
 export function createCompilerCreator (baseCompile: Function): Function {
   return function createCompiler (baseOptions: CompilerOptions) {
+    // 定义了compile函数 //接收两个参数
+    // 一,template模版字符串。二,选项参数
+
     function compile (
       template: string,
       options?: CompilerOptions
     ): CompiledResult {
+      // 以baseOptions为原型创建finalOptions常量 finalOptions才是最终的编译选项参数
       const finalOptions = Object.create(baseOptions)
       const errors = []
       const tips = []
@@ -67,6 +71,7 @@ export function createCompilerCreator (baseCompile: Function): Function {
       return compiled
     }
 
+    //返回一个对象 包含 compile函数本身和compileToFunctions函数
     return {
       compile,
       compileToFunctions: createCompileToFunctionFn(compile)

@@ -31,12 +31,15 @@ export const isSVG = makeMap(
   true
 )
 
+// 通过给定的标签名字检查是否是 pre标签
 export const isPreTag = (tag: ?string): boolean => tag === 'pre'
 
+// 通过给定的标签名检查是否是 保留标签
 export const isReservedTag = (tag: string): ?boolean => {
   return isHTMLTag(tag) || isSVG(tag)
 }
 
+// 获取元素标签的命令空间
 export function getTagNamespace (tag: string): ?string {
   if (isSVG(tag)) {
     return 'svg'
