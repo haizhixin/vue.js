@@ -277,10 +277,16 @@ export const identity = (_: any) => _
 /**
  * Generate a string containing static keys from compiler modules.
  */
+// 根据compiler的modules生成含有静态key的字符串
 export function genStaticKeys (modules: Array<ModuleOptions>): string {
   return modules.reduce((keys, m) => {
     return keys.concat(m.staticKeys || [])
   }, []).join(',')
+  // reduce()接收两个参数 第一个为回调函数 第二个为回调函数第一个参数的初始值
+  // reduce 第一个参数是 回调函数上一次调用返回的值,或者是提供的初始值
+  // reduce 第二个参数是 当前被处理的数组元素
+  //  reduce 第三个参数 当前被处理的元素的索引
+  //  reduce 第四个参数  调用reduce的数组
 }
 
 /**
