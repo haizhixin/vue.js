@@ -1,8 +1,14 @@
 /* @flow */
 
-import { dirRE, onRE } from './parser/index'
+import {
+  dirRE,
+  onRE
+} from './parser/index'
 
-type Range = { start?: number, end?: number };
+type Range = {
+  start ? : number,
+  end ? : number
+};
 
 // these keywords should not appear inside expressions, but operators like
 // typeof, instanceof and in are allowed
@@ -21,13 +27,13 @@ const unaryOperatorsRE = new RegExp('\\b' + (
 const stripStringRE = /'(?:[^'\\]|\\.)*'|"(?:[^"\\]|\\.)*"|`(?:[^`\\]|\\.)*\$\{|\}(?:[^`\\]|\\.)*`|`(?:[^`\\]|\\.)*`/g
 
 // detect problematic expressions in a template
-export function detectErrors (ast: ?ASTNode, warn: Function) {
+export function detectErrors(ast: ? ASTNode, warn : Function) {
   if (ast) {
     checkNode(ast, warn)
   }
 }
 
-function checkNode (node: ASTNode, warn: Function) {
+function checkNode(node: ASTNode, warn: Function) {
   if (node.type === 1) {
     for (const name in node.attrsMap) {
       if (dirRE.test(name)) {
@@ -56,7 +62,7 @@ function checkNode (node: ASTNode, warn: Function) {
   }
 }
 
-function checkEvent (exp: string, text: string, warn: Function, range?: Range) {
+function checkEvent(exp: string, text: string, warn: Function, range ? : Range) {
   const stripped = exp.replace(stripStringRE, '')
   const keywordMatch: any = stripped.match(unaryOperatorsRE)
   if (keywordMatch && stripped.charAt(keywordMatch.index - 1) !== '$') {
@@ -69,19 +75,19 @@ function checkEvent (exp: string, text: string, warn: Function, range?: Range) {
   checkExpression(exp, text, warn, range)
 }
 
-function checkFor (node: ASTElement, text: string, warn: Function, range?: Range) {
+function checkFor(node: ASTElement, text: string, warn: Function, range ? : Range) {
   checkExpression(node.for || '', text, warn, range)
   checkIdentifier(node.alias, 'v-for alias', text, warn, range)
   checkIdentifier(node.iterator1, 'v-for iterator', text, warn, range)
   checkIdentifier(node.iterator2, 'v-for iterator', text, warn, range)
 }
 
-function checkIdentifier (
-  ident: ?string,
-  type: string,
+function checkIdentifier(
+  ident: ? string,
+  type : string,
   text: string,
   warn: Function,
-  range?: Range
+  range ? : Range
 ) {
   if (typeof ident === 'string') {
     try {
@@ -92,7 +98,7 @@ function checkIdentifier (
   }
 }
 
-function checkExpression (exp: string, text: string, warn: Function, range?: Range) {
+function checkExpression(exp: string, text: string, warn: Function, range ? : Range) {
   try {
     new Function(`return ${exp}`)
   } catch (e) {
@@ -114,7 +120,7 @@ function checkExpression (exp: string, text: string, warn: Function, range?: Ran
   }
 }
 
-function checkFunctionParameterExpression (exp: string, text: string, warn: Function, range?: Range) {
+function checkFunctionParameterExpression(exp: string, text: string, warn: Function, range ? : Range) {
   try {
     new Function(exp, '')
   } catch (e) {
