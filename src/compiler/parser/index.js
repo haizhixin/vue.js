@@ -21,32 +21,66 @@ import {
   getAndRemoveAttrByRegex
 } from '../helpers'
 
+// 检测标签属性名是否是监听事件的指令
 export const onRE = /^@|^v-on:/
+// 检测标签属性名是否是指令
+// v-开头的属性都被认为是指令 @是v-on的缩写 :是v-bind的缩写 
+// #是v-slot的缩写
 export const dirRE = process.env.VBIND_PROP_SHORTHAND
   ? /^v-|^@|^:|^\.|^#/
   : /^v-|^@|^:|^#/
+
+// \s匹配空白字符 \S匹配非空白字符 [\s\S]匹配任何字符
+// ? 放在* +后面 表示匹配尽可能少的字符串 懒匹配
+// ?:代表非捕获分组
+//  forAliasRE用来匹配 v-for属性值  并捕获 in 或者of后面的值
 export const forAliasRE = /([\s\S]*?)\s+(?:in|of)\s+([\s\S]*)/
+// forIteratorRE用来匹配 forAliasRE第一个捕获到的捕获分组
+// 三个捕获分组
+// 一, 除了 , } ]
+// 二, 不是捕获分组
+// 三,  除了, } ]
+// 如 <div v-for="(value, key, index) in object"></div>
+// 用forAlisaRE匹配以上字符串去掉 括号 第一个捕获组结果是 value, key,index
+// 用forIteratorRE匹配  forIterator的第一个捕获组 为 key forIterator的第二个捕获组 是index 
 export const forIteratorRE = /,([^,\}\]]*)(?:,([^,\}\]]*))?$/
+// stripParensRE用来匹配以( 开头 或者以)结尾 或者两者都满足
+// 作用是去掉 forAlisaRE的匹配结果中的 () 
+// 实现方式如下 '(value, key, index)'.replace(stripParensRE,"")
 const stripParensRE = /^\(|\)$/g
+// 匹配 以[开始 以]结尾 中间是 除了换行符\n以外的任何单子符
 const dynamicArgRE = /^\[.*\]$/
 
+// 用来匹配指令中的参数 如<div v-on:click.stop="handleClick"></div>
+// 匹配:click.stop 并且拥有一个捕获组 捕获组为参数名字
 const argRE = /:(.*)$/
+// 以:或者.或者v-bind:开始
 export const bindRE = /^:|^\.|^v-bind:/
+// 以.开始
 const propBindRE = /^\./
+//?=n 量词匹配任何其后紧接指定字符串 n 的字符串。
+// modifierRE匹配修饰符
 const modifierRE = /\.[^.\]]+(?=[^\]]*$)/g
-
+//以 v-slot:开始 或者v-slot结束 或者以#开始
 const slotRE = /^v-slot(:|$)|^#/
-
+// 匹配回车换行
 const lineBreakRE = /[\r\n]/
+// 匹配一个或者多个空白字符
 const whitespaceRE = /\s+/g
-
+//  匹配 空白字符 单引号 双引号 < > 左斜线 等于号
 const invalidAttributeRE = /[\s"'<>\/=]/
-
+// cached函数 接收一个函数参数 并返回一个和函数参数一模一样的函数 唯一的区别是新返回的函数具有缓存功能
+// 如果一个函数接收相同参数的情况下 总返回相同的值 cached函数将会为该函数提供性能上的优势
+// he.decode函数用于HTML字符实体的解码工作
+// console.log(he.decode('&#x26;'))  // &#x26; -> '&'
+// &#x26;代表字符实体 通过he.decode解码为 &字符
+// decodeHTMLCached用于对纯文本的解码 如果不进行解码那么用户无法使用字符实体 进行编码
 const decodeHTMLCached = cached(he.decode)
 
 export const emptySlotScopeToken = `_empty_`
 
 // configurable state
+// 定义平台化选项变量
 export let warn: any
 let delimiters
 let transforms
@@ -57,6 +91,11 @@ let platformMustUseProp
 let platformGetTagNamespace
 let maybeComponent
 
+// 创建一个元素的描述对象的函数
+// 接收三个参数
+// 一:标签名
+// 二:标签的属性数组
+// 三:当前标签的父标签的描述对象的引用
 export function createASTElement (
   tag: string,
   attrs: Array<ASTAttr>,
@@ -65,8 +104,8 @@ export function createASTElement (
   return {
     type: 1,
     tag,
-    attrsList: attrs,
-    attrsMap: makeAttrsMap(attrs),
+    attrsList: attrs,//attrsList原始的标签属性数组 
+    attrsMap: makeAttrsMap(attrs),// makeAttrsMap将原始的标签属性数组转化为 名值对一一对应的对象
     rawAttrsMap: {},
     parent,
     children: []
@@ -76,40 +115,62 @@ export function createASTElement (
 /**
  * Convert HTML string to AST.
  */
+// 解析模版字符串最终生成AST
+// AST节点分为三种类型
+// type =1;元素节点 type=2;文本节点 type=3 注释节点
 export function parse (
   template: string,
   options: CompilerOptions
 ): ASTElement | void {
+  //初始化8个平台化变量值为编译器的选项参数  不同的平台下的编译器选项参数不同 因此8个平台化的变量在不同的平台下 其值不同
   warn = options.warn || baseWarn
-
+ // no是一个传入任何值都返回false的函数
+  
+  //options选项参数 isPreTag函数 判断一个标签是否是pre标签
   platformIsPreTag = options.isPreTag || no
+  // mustUseProp检测一个属性在标签中是否需要使用元素对象原生的属性进行绑定
   platformMustUseProp = options.mustUseProp || no
+  // 获取元素的命令空间
   platformGetTagNamespace = options.getTagNamespace || no
+  // 检查给定的标签是否是保留标签
   const isReservedTag = options.isReservedTag || no
   maybeComponent = (el: ASTElement) => !!el.component || !isReservedTag(el.tag)
 
+  //options.modules中只有前两个参数有transformNode transforms最终的值为 [transformNode,transformNode]
   transforms = pluckModuleFunction(options.modules, 'transformNode')
+  //options.modules中只有最后一个参数有preTransformNode preTansforms 最终值 [preTransformNode]
   preTransforms = pluckModuleFunction(options.modules, 'preTransformNode')
+  // options.modules中没有 postTransformNode postTransforms最终值为[]
   postTransforms = pluckModuleFunction(options.modules, 'postTransformNode')
-
+  
+  // 创建vue实例对象时所传递的dlimiters选项 它的值是一个数组
+  // 改变纯文本插入分隔符
   delimiters = options.delimiters
 
-  const stack = []
+  const stack = []// stack 用来修正当前正在解析元素的父级
+  // options.preserveWhitespace 编译器选项 用来告诉编译器 当编译html字符串时是否放弃标签之间的空格 true代表放弃
   const preserveWhitespace = options.preserveWhitespace !== false
   const whitespaceOption = options.whitespace
+  // 最终生成的AST
   let root
+  // 当前父元素 元素描述对象之间的父子关系 就是靠此变量进行联系的
   let currentParent
+  // inVpre当前解析的标签是否在拥有v-pre属性的标签内
   let inVPre = false
+  // inPre当前解析的标签 是否在<pre></pre>标签内
   let inPre = false
-  let warned = false
 
+  let warned = false
+  //warnOnce打印一次警告
   function warnOnce (msg, range) {
     if (!warned) {
       warned = true
+      // 打印警告信息也是靠warn函数实现
       warn(msg, range)
     }
   }
 
+  // 闭合标签的结束标签或者一元标签
   function closeElement (element) {
     trimEndingWhitespace(element)
     if (!inVPre && !element.processed) {
@@ -201,7 +262,12 @@ export function parse (
     }
   }
 
-  parseHTML(template, {
+   // 主要通过调用parseHTML函数对模板字符串进行解析
+   // 实际上parseHTML函数的作用就是用来做词法分析的
+   // 而parse函数的主要作用是在词法分析的基础上做句法分析从而生成一颗AST
+   // 构建AST最关键的选项是 start end chars comment四个钩子函数
+  parseHTML(template, 
+    {
     warn,
     expectHTML: options.expectHTML,
     isUnaryTag: options.isUnaryTag,
@@ -210,14 +276,20 @@ export function parse (
     shouldDecodeNewlinesForHref: options.shouldDecodeNewlinesForHref,
     shouldKeepComment: options.comments,
     outputSourceRange: options.outputSourceRange,
+    //开始标签的钩子函数
     start (tag, attrs, unary, start, end) {
+      // 在start钩子函数中 当前解析阶段就是遇到一个开始标签的阶段
+      // 因此我们可以把开始标签称为 当前元素;把当前元素的父标签称为 父级元素
       // check namespace.
       // inherit parent ns if there is one
+      // 获取当前元素的命名空间 只有svg 和math有 命名空间
+      // 如果有父级元素且父级元素有命名空间 就采用父级元素的命名空间 否则 就调用platformGetTagNamespace()函数进行获取
       const ns = (currentParent && currentParent.ns) || platformGetTagNamespace(tag)
-
+      
       // handle IE svg bug
       /* istanbul ignore if */
       if (isIE && ns === 'svg') {
+        // 利用guardIBSVGBUG处理 svg在IE下的bug
         attrs = guardIESVGBug(attrs)
       }
 
@@ -296,7 +368,7 @@ export function parse (
         closeElement(element)
       }
     },
-
+    // 结束标签的钩子函数
     end (tag, start, end) {
       const element = stack[stack.length - 1]
       // pop stack
@@ -307,7 +379,7 @@ export function parse (
       }
       closeElement(element)
     },
-
+    // 纯文本钩子函数
     chars (text: string, start: number, end: number) {
       if (!currentParent) {
         if (process.env.NODE_ENV !== 'production') {
@@ -379,6 +451,7 @@ export function parse (
         }
       }
     },
+    // 注释节点钩子函数
     comment (text: string, start, end) {
       // adding anyting as a sibling to the root node is forbidden
       // comments should still be allowed, but ignored
@@ -946,14 +1019,34 @@ const ieNSPrefix = /^NS\d+:/
 
 /* istanbul ignore next */
 function guardIESVGBug (attrs) {
+  // <svg xmlns:feature="http://www.openplans.org/topp"></svg>在IE下被渲染为:
+  // <svg xmlns:NS1="" NS1:xmlns:feature="http://www.openplans.org/topp"></svg>
+  // 以上标签传递给start钩子函数时 attrs为
+  // attrs = [
+  //   {
+  //     name: 'xmlns:NS1',
+  //     value: ''
+  //   },
+  //   {
+  //     name: 'NS1:xmlns:feature',
+  //     value: 'http://www.openplans.org/topp'
+  //   }
+  // ]
   const res = []
   for (let i = 0; i < attrs.length; i++) {
     const attr = attrs[i]
-    if (!ieNSBug.test(attr.name)) {
+    if (!ieNSBug.test(attr.name)) {// 剔除 name:xmlns:NS1
       attr.name = attr.name.replace(ieNSPrefix, '')
+      // 把 'NS1:xmlns:feature'转化为 xmlns:feature
       res.push(attr)
     }
   }
+  //最终 attrs = [
+  //   {
+  //     name: 'xmlns:feature',
+  //     value: 'http://www.openplans.org/topp'
+  //   }
+  // ]
   return res
 }
 

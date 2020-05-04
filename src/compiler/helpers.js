@@ -6,11 +6,12 @@ import { parseFilters } from './parser/filter-parser'
 type Range = { start?: number, end?: number };
 
 /* eslint-disable no-unused-vars */
+// baseWarn的作用是通过console.error来打印错误信息
 export function baseWarn (msg: string, range?: Range) {
   console.error(`[Vue compiler]: ${msg}`)
 }
 /* eslint-enable no-unused-vars */
-
+// 从modules中取出 和 key相同的 属性值 并组成一个数组然后过滤掉数组中不存在的属性值
 export function pluckModuleFunction<F: Function> (
   modules: ?Array<Object>,
   key: string

@@ -4,6 +4,7 @@ import { extend } from 'shared/util'
 import { detectErrors } from './error-detector'
 import { createCompileToFunctionFn } from './to-function'
 
+// 此处应用函数柯里化 把多元函数转化为一元函数
 export function createCompilerCreator(baseCompile: Function): Function {
 
     return function createCompiler(baseOptions: CompilerOptions) {
