@@ -292,10 +292,14 @@ export function parse (
         // 利用guardIBSVGBUG处理 svg在IE下的bug
         attrs = guardIESVGBug(attrs)
       }
-
+      
+      // 为当前元素创建了描述对象
+      // 把当前标签的元素描述对象赋值给element
       let element: ASTElement = createASTElement(tag, attrs, currentParent)
       if (ns) {
+        //如果有命名空间 在当前标签的描述对象上添加ns 其属性值为命名空间的值
         element.ns = ns
+        // 因此如果解析出的是 svg math或者其子标签 会比其他标签多出一个ns属性
       }
 
       if (process.env.NODE_ENV !== 'production') {
@@ -320,8 +324,18 @@ export function parse (
           }
         })
       }
-
+      
+      // 在非服务端渲染的情况下 当前元素是否是被禁止的标签
+      // 被禁止的标签是 style 和script  因为vue认为 模版只应该负责数据状态到UI的渲染
+      // 而不应该存在引起副作用的代码
+      // 如果你的模板中存在 <script> 标签，那么该标签内的代码很容易引起副作用。但有一种情况例外，比如其中一种定义模板的方式为：
+      // <script type="text/x-template" id="hello-world-template">
+      //   <p>Hello hello hello</p>
+      // </script>
+      
+      // isForbiddenTag返回true 说明该标签是禁止标签
       if (isForbiddenTag(element) && !isServerRendering()) {
+        // 当前元素会被标记为禁止标签
         element.forbidden = true
         process.env.NODE_ENV !== 'production' && warn(
           'Templates should only be responsible for mapping the state to the ' +
@@ -333,9 +347,15 @@ export function parse (
 
       // apply pre-transforms
       for (let i = 0; i < preTransforms.length; i++) {
+        // preTransforms中函数接收两个参数 当前元素描述对象 和编译器选项
+        // preTransforms 和 transforms、postTransforms 和process系列函数没有什么区别
+        // 都是为了对当前元素的描述对象进行进一步处理 之所以把他们和process系列函数区分开 就是出于平台化的考虑
+        // 我们知道这些函数 来自不同的平台
         element = preTransforms[i](element, options) || element
       }
-
+      
+      // 接下来就是调用process系列函数 使得该元素描述对象更好的描述一个标签
+      // 也就是说在当前元素描述对象上添加各种各样的具有标识作用的属性
       if (!inVPre) {
         processPre(element)
         if (element.pre) {
@@ -1004,7 +1024,11 @@ function isTextTag (el): boolean {
   return el.tag === 'script' || el.tag === 'style'
 }
 
+// isForbiddenTag接收一个元素描述对象作为参数
 function isForbiddenTag (el): boolean {
+ // style是禁止标签
+ // script标签如果没有type属性 是禁止标签
+ // script标签 type属性为 text/javascript
   return (
     el.tag === 'style' ||
     (el.tag === 'script' && (

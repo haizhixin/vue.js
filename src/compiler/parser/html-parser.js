@@ -254,13 +254,14 @@ export function parseHTML(html, options) {
       // rest保存剩余字符 把用reStackedTag匹配到的字符 替换成''
       // 如果html为 dddd</textarea> 则rest 为''
       // 如果html为 dddd</textarea>dddaer 则rest 为'dddaer'
-      const rest = html.replace(reStackedTag, function (all, text, endTag) {
+      const rest = html.replace(reStackedTag, function (all, text, endTag) {// all为匹配到的整个字符串 text(纯文本标签的内容)为reStackedTag正则的第一个捕获分组  endTag(纯文本标签的结束标签)为正则的第一个捕获分组
         endTagLength = endTag.length
         if (!isPlainTextElement(stackedTag) && stackedTag !== 'noscript') {
           text = text
             .replace(/<!\--([\s\S]*?)-->/g, '$1') // #7298
             .replace(/<!\[CDATA\[([\s\S]*?)]]>/g, '$1')
         }
+        // 忽略textarea中内容的第一个换行符
         if (shouldIgnoreFirstNewline(stackedTag, text)) {
           text = text.slice(1)
         }
@@ -269,9 +270,12 @@ export function parseHTML(html, options) {
         }
         return ''
       })
-      index += html.length - rest.length
+      index += html.length - rest.length // html和剩余字符串的差就是 处理掉的那部分内容
+      // 把rest常量赋值给html 以供下次循环使用
       html = rest
+      // 解析纯文本标签的结束标签 并传入结束标签 以及结束标签的开始 结束标签的结尾
       parseEndTag(stackedTag, index - endTagLength, index)
+      // 纯文本标签的处理宗旨是 把纯文本标签的内容当作纯文本来对待
     }
 
     // 当html为 <2 时即匹配不到标签 也没有下一个< 此时循环终止 last==html成立
