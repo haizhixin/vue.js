@@ -1,6 +1,16 @@
 /* @flow */
 
 const validDivisionCharRE = /[\w).+\-_$\]]/
+// 过滤器以管道符 | 分隔 但是不能把所有在绑定属性的值中出现的 | 都作为过滤器管道符
+// 以下五种情况 不是过滤器管道符
+{/* 
+1,<div :key="'id | featId'"></div>  <!-- 单引号内的管道符 -->
+2,<div :key='"id | featId"'></div>  <!-- 双引号内的管道符 -->
+3,<div :key="`id | featId`"></div>  <!-- 模板字符串内的管道符 -->
+4,<div :key="/id|featId/.test(id).toString()"></div>  <!-- 正则表达式内的管道符 -->
+5,<div :key="id || featId"></div>  <!-- 逻辑或运算符内的管道符 --> */}
+// 除了以上五种情况 存在冲突的还有 按位或运算符 它是位运算中的一个运算符
+// 这时我们必须做出选择：既然你希望管道符用来作为过滤器的分界线那就抛弃它按位或运算符的意义。
 
 export function parseFilters (exp: string): string {
   let inSingle = false

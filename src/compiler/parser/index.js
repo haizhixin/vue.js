@@ -633,6 +633,7 @@ export function processElement(
 
 function processKey(el) {
     // 通过getBindingAttr函数从元素描述对象的attrsList数组中获取 属性名为key的属性值
+    // getBindingAttr 获取绑定属性的值 绑定属性就是通过v-bind 或者:缩写所定义的属性
     const exp = getBindingAttr(el, 'key')
     if (exp) {
         if (process.env.NODE_ENV !== 'production') {

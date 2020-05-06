@@ -159,24 +159,50 @@ export function getRawBindingAttr(
         el.rawAttrsMap[name]
 }
 
+// 获取绑定属性的值
 export function getBindingAttr(
     el: ASTElement,
     name: string,
     getStatic ? : boolean
 ): ? string {
+    //根据传入的name 去获取:name或者v-bind:name的值
+    // 绑定属性有这两种写法 把获取到的绑定属性的值赋值给dynamicValue
     const dynamicValue =
         getAndRemoveAttr(el, ':' + name) ||
         getAndRemoveAttr(el, 'v-bind:' + name)
+     // if条件语句是判断绑定的属性是否存在 而不是绑定属性的属性值是否存在
+     // 因为绑定属性值不存在 dynamicValue的值为"" ""!=null仍成立 
+     // 只有绑定属性不存在 dynamicValue的值为undefined  undefined!=null不成立 才会走else if条件
     if (dynamicValue != null) {
+        // 处理绑定的属性值 绑定的属性值是可以使用过滤器的 parseFilters函数是用来解析过滤器的
         return parseFilters(dynamicValue)
+        // 不全等意味着 getStatic这个参数 如果传 true或者不传 此else if条件分支会成立
     } else if (getStatic !== false) {
+        //走到这个分支意味着获取绑定属性的值失败 因此继续尝试获取它非绑定属性的值 此时参数只传一个name 并调用getAndRemoveAttr
         const staticValue = getAndRemoveAttr(el, name)
+        // 如果属性值存在 对属性值进行JSON.stringify处理 对非绑定的属性来讲保证它始终是个字符串
+        // 因为编译器生成的渲染函数其实是字符串形式的渲染函数 它最终要通过new Function(str)才能变成真正的渲染函数
+        // 代码一
+        // const fn1 = new Function('console.log(1)')
+        // // 代码二
+        // const fn2 = new Function(JSON.stringify('console.log(1)'))
+        // 如上代码等价：
+        // // 代码一
+        // const fn1 = function () {
+        //   console.log(1)
+        // }
+        // // 代码二
+        // const fn2 = function () {
+        //   'console.log(1)'
+        // }
+        // 当你执行 f1() 函数时，在控制台会得到输出数字 1，而当你执行 fn2 函数时则不会得到任何输出，
         if (staticValue != null) {
-            return JSON.stringify(staticValue)
-        }
+        return JSON.stringify(staticValue)
+        // 使用JSON.stringify的原因是确保非绑定属性的值始终是一个字符串而非一个表达式
+     }
     }
-}
-
+ }
+      
 // note: this only removes the attr from the Array (attrsList) so that it
 // doesn't get processed by processAttrs.
 // By default it does NOT remove it from the map (attrsMap) because the map is
