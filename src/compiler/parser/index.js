@@ -682,6 +682,8 @@ function processRef(el) {
         }
         // 如果是refInfor的值为true 否则为false
         el.refInFor = checkInFor(el)
+        // 为什么要判断ref属性是否在v-for指令中？如果ref属性存在v-for指令中,我们需要创建一个组件实例或者DOM节点的引用数组,而不是单一引用
+        // 这个时候需要使用refInFor属性来判断
     }
 }
 
@@ -1178,11 +1180,15 @@ function processAttrs(el) {
 
 function checkInFor(el: ASTElement): boolean {
     // 如果一个标签使用了ref属性 那么如果该标签或者该标签的父级元素上存在v-for指令 那么就认为ref属性是在v-for指令之内的
+    // 因此如果要判断ref属性是否在v-for指令之内,就要从当前元素描述对象开始一直遍历到根节点元素的描述对象 一旦发现某个标签上存在v-for属性
+    // 就认为该ref属性在v-for指令之内
     let parent = el
     while (parent) {
+        // 判断当前元素存在v-for属性
         if (parent.for !== undefined) {
             return true
         }
+        //如果不存在 向根元素的方向继续寻找
         parent = parent.parent
     }
     return false
