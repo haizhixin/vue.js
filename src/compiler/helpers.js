@@ -181,24 +181,33 @@ export function getBindingAttr (
 // doesn't get processed by processAttrs.
 // By default it does NOT remove it from the map (attrsMap) because the map is
 // needed during codegen.
+// getAndRemoveAttr除获取给定的属性值外还会将属性从attrsList中移除
+// 还会有选择的将属性从attrsMap中移除
 export function getAndRemoveAttr (
-  el: ASTElement,
-  name: string,
-  removeFromMap?: boolean
+  el: ASTElement,//元素描述对象
+  name: string,// 获取属性的名字
+  removeFromMap?: boolean //可选参数
 ): ?string {
   let val
+  // val变量保存的是要获取属性的值
+  // 因为el的属性对象attrsMap中保存的是该元素所有属性的名值对对应表,因此获取属性指的方式是
+  // 直接用获取属性的的名字和 attrsMap对象中的属性去匹配 并将匹配到的结果与null进行对比
+  // 如果匹配结果不为null 说明能匹配到值
   if ((val = el.attrsMap[name]) != null) {
     const list = el.attrsList
     for (let i = 0, l = list.length; i < l; i++) {
+      // 通过name找到attrsList中相应的数组元素 并将其移除
       if (list[i].name === name) {
         list.splice(i, 1)
         break
       }
     }
   }
-  if (removeFromMap) {
+  if (removeFromMap) {//如果removeFromMap为true
+    //还会将该属性从 属性名值对列表中删除
     delete el.attrsMap[name]
   }
+  // 最后返回name对应的属性值  如果属性值不存在 返回undefined
   return val
 }
 
