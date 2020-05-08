@@ -17,6 +17,7 @@ const validDivisionCharRE = /[\w).+\-_$\]]/
 // 这时我们必须做出选择：既然你希望管道符用来作为过滤器的分界线那就抛弃它按位或运算符的意义。
 // 正则表达式<div :key="/id|featId/.test(id).toString()"></div>  <!-- 正则表达式内的管道符 -->这种情况下的管道符是最难判断的
 // 因为我们很难识别出一个正则表达式 / 也有除法的意思,难点在于我们如何区分它是一个除法还是 正则
+// parseFilters函数用来解析模板中出现的表达式和过滤器并将他们处理成合适的表达式字符串
 export function parseFilters(exp: string): string {
     let inSingle = false // 用来标识当前读取的字符是否在由单引号包裹的字符串中
     let inDouble = false // 用来标识当前读取的字符是否在由双引号包裹的字符串中
@@ -75,14 +76,14 @@ export function parseFilters(exp: string): string {
             !curly && !square && !paren
         ) {
             // 如果当前读取的字符是过滤器的分界线，则会执行这里的代码
-            
+
             if (expression === undefined) {
                 //第一次遇到作为过滤器分界线的管道分隔符
                 // first filter, end of expression
                 // i是当前遇到的管道符的位置索引  i+1是管道符下一个字符的位置索引
                 lastFilterIndex = i + 1
                 // 对exp字符串进行截取 截取的结束位置刚好是管道符的位置 但不包括管道符 并去掉前后的空格 并把值赋给expression
-                //例如<div :key="id | featId"></div>截取后的值是 id 
+                //例如<div :key="id | featId"></div>截取后的值是 id
                 expression = exp.slice(0, i).trim()
 
             } else {
@@ -167,7 +168,10 @@ export function parseFilters(exp: string): string {
     // for循环结束 i的值是字符串exp的长度
     // <div :key="id | featId"></div>对于它来说 expression的值为id
     // 此时expression有值因此会走else if判断条件
+
+    // 如果expression===undefined说明此时没有没有过滤器
     if (expression === undefined) {
+        // 把当前整个字符串作为表达式的值传递给expression
         expression = exp.slice(0, i).trim()
     } else if (lastFilterIndex !== 0) {
         pushFilter()
@@ -181,10 +185,12 @@ export function parseFilters(exp: string): string {
         lastFilterIndex = i + 1
     }
     // 经过以上处理之后 expression代表着表达式 filters代表着所有过滤器的名字
-//    如 <div :key="id | a | b | c"></div>
-// 那么经过解析，变量 expression 的值将是字符串 'id'，且 filters 数组中将包含三个元素：['a', 'b', 'c']。
+    // 如 <div :key="id | a | b | c"></div>
+    // 那么经过解析，变量 expression 的值将是字符串 'id'，且 filters 数组中将包含三个元素：['a', 'b', 'c']。
 
+    // 检查过滤filters是否存在 如果绑定的值不存在过滤器 此时会把整个字符串作为表达式的值 那么filters为undefined代表没有过滤器
     if (filters) {
+        // 如果有过滤器循环过滤器
         for (i = 0; i < filters.length; i++) {
             expression = wrapFilter(expression, filters[i])
         }

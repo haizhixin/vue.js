@@ -253,6 +253,7 @@ export function parse(
         }
 
         // apply post-transforms
+        //后置处理
         for (let i = 0; i < postTransforms.length; i++) {
             postTransforms[i](element, options)
         }
@@ -380,6 +381,7 @@ export function parse(
             }
 
             // apply pre-transforms
+            // 前置处理
             for (let i = 0; i < preTransforms.length; i++) {
                 // preTransforms中函数接收两个参数 当前元素描述对象 和编译器选项
                 // preTransforms 和 transforms、postTransforms 和process系列函数没有什么区别
@@ -620,13 +622,27 @@ export function processElement(
         !element.attrsList.length
     ) //此时 会把元素描述对象的plain设置为true  静态优化和代码生成时会用到这个属性
 
+    // 处理ref属性对应的属性值
     processRef(element)
+    //处理插槽
     processSlotContent(element)
     processSlotOutlet(element)
+    // 处理component内置组件
     processComponent(element)
+    //中置处理
     for (let i = 0; i < transforms.length; i++) {
         element = transforms[i](element, options) || element
     }
+
+    // v-pre
+    // v-for
+    // v-if、v-else-if、v-else
+    // v-once
+    // key
+    // ref
+    // slot、slot-scope、scope、name
+    // is、inline-template 以上元素在processAttrs函数解析过了
+    // 处理剩余未被处理的元素
     processAttrs(element)
     return element
 }
@@ -883,10 +899,15 @@ function processOnce(el) {
 // e.g. <template slot="xxx">, <div slot-scope="xxx">
 function processSlotContent(el) {
     let slotScope
+    // 如果当前标签是template
     if (el.tag === 'template') {
+        // 获取template标签上的scope的属性值 并把它赋值给slotScope
         slotScope = getAndRemoveAttr(el, 'scope')
         /* istanbul ignore if */
         if (process.env.NODE_ENV !== 'production' && slotScope) {
+            // 在非生产环境下，如果 slotScope 变量存在，则说明 <template> 标签中使用了 scope 属性，
+            // 但是这个属性已经在 2.5.0+ 的版本中被 slot-scope 属性替代了，所以现在更推荐使用 slot-scope 属性，
+            // 好处是 slot-scope 属性不受限于 <template> 标签。
             warn(
                 `the "scope" attribute for scoped slots have been deprecated and ` +
                 `replaced by "slot-scope" since 2.5. The new "slot-scope" attribute ` +
@@ -896,10 +917,17 @@ function processSlotContent(el) {
                 true
             )
         }
+        // 如果存在scope则获取scope对应的属性值 否则尝试 获取template标签上的slot-scope属性对应的属性值 并把值赋给slotScope
         el.slotScope = slotScope || getAndRemoveAttr(el, 'slot-scope')
-    } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) {
+        // 以上无论是scope还是slot-scope都是通过 getAndRemoveAttr属性获取的 所以说明scope和slot-scope属性都不能用作绑定属性
+    } else if ((slotScope = getAndRemoveAttr(el, 'slot-scope'))) { // slot-scope属性可以用在任何标签上 如果不是template 直接去获取当前元素描述对象上的slot-scope的属性值
+        // 如果获取到直接赋值给slotScope并执行以下代码 如果获取不执行以下代码
         /* istanbul ignore if */
         if (process.env.NODE_ENV !== 'production' && el.attrsMap['v-for']) {
+            //  <div slot-scope="slotProps" v-for="item of slotProps.list"></div>
+            //   如上这句代码中，slot-scope 属性与 v-for 指令共存，这会造成什么影响呢
+            // v-for具有更高的优先级 因此v-for绑定的状态将会是父组件作用域绑定的状态,
+            // 而不是子组件通过作用域插槽传递的状态  并且这样使用很容易让人感到困惑
             warn(
                 `Ambiguous combined usage of slot-scope and v-for on <${el.tag}> ` +
                 `(v-for takes higher priority). Use a wrapper <template> for the ` +
@@ -907,18 +935,35 @@ function processSlotContent(el) {
                 el.rawAttrsMap['slot-scope'],
                 true
             )
+            //  <template slot-scope="slotProps">
+            //    <div v-for="item of slotProps.list"></div>
+            // </template>
+            // 这样就不会有任何歧义，v-for 指令绑定的状态就是作用域插槽传递的状态
         }
+
         el.slotScope = slotScope
+        // 我们发现无论是 <template> 标签，还是其他元素标签，只要该标签使用了 slot-scope 属性，
+        // 则该标签的元素描述对象将被添加 el.slotScope 属性。
     }
 
+    //处理标签的slot属性 使用getBindingAttr说明该属性是可以使用绑定属性 并把值赋给slotTarget属性
     // slot="xxx"
     const slotTarget = getBindingAttr(el, 'slot')
+
     if (slotTarget) {
+        // 这句代码检测了 slotTarget 变量是否为字符串 '""'，
+        // 这种情况出现在标签虽然使用了 slot 属性，但却没有为 slot 属性指定相应的值，如下：<div slot></div>
+        // 否则直接把slotTarget的值赋给当前元素描述对象的属性slotTarget
         el.slotTarget = slotTarget === '""' ? '"default"' : slotTarget
+        //用slotTargetDynamic属性来记录当前元素对象是否有:slot或则v-bind:slot对应的属性值
         el.slotTargetDynamic = !!(el.attrsMap[':slot'] || el.attrsMap['v-bind:slot'])
         // preserve slot as an attribute for native shadow DOM compat
         // only for non-scoped slots.
         if (el.tag !== 'template' && !el.slotScope) {
+            // 注释已经写的很清楚了，实际上这段代码的作用就是用来保存原生影子DOM(shadow DOM)的 slot 属性
+            // 当然啦既然是原生影子DOM的 slot 属性，那么首先该元素必然应该是原生DOM，所以 el.tag !== 'template' 必须成立，
+            // 同时对于作用域插槽是不会保留原生 slot 属性的。
+
             addAttr(el, 'slot', slotTarget, getRawBindingAttr(el, 'slot'))
         }
     }
@@ -1019,9 +1064,17 @@ function getSlotName(binding) {
 
 // handle <slot/> outlets
 function processSlotOutlet(el) {
+    // 如果当前标签是slot
     if (el.tag === 'slot') {
+        // 获取slot标签上的name属性值 <slot name="header"></slot>
+        // 则 el.slotName 属性的值为 JSON.stringify('header')。
+        // 如果<slot></slot>则 el.slotName 属性的值为 undefined。
         el.slotName = getBindingAttr(el, 'name')
         if (process.env.NODE_ENV !== 'production' && el.key) {
+            // 在非生产环境下，如果发现在 <slot> 标签中使用 key 属性，则会打印警告信息，提示开发者 key 属性不能使用在 slot 标签上，另外大家应该还记得，
+            // 在前面的分析中我们也知道 key 属性同样不能使用在 <template> 标签上。大家可以发现 <slot> 标签和 <template>
+            // 标签的共同点就是他们都是抽象组件，抽象组件的特点是要么不渲染真实DOM，要么会被不可预知的DOM元素替代。
+            // 这就是在这些标签上不能使用 key 属性的原因。对于 <slot> 标签的处理就是如上这些内容
             warn(
                 `\`key\` does not work on <slot> because slots are abstract outlets ` +
                 `and can possibly expand into multiple elements. ` +
@@ -1032,24 +1085,59 @@ function processSlotOutlet(el) {
     }
 }
 
+// 处理component内置组件
 function processComponent(el) {
     let binding
+    // 处理component组件上的is属性 支持绑定值
     if ((binding = getBindingAttr(el, 'is'))) {
+        // 将取到的值赋值给当前元素描述对象的component
         el.component = binding
+        // 例子一：
+        // <div is></div>
+        // 上例中的 is 属性是非绑定的，并且没有任何值，则最终如上标签经过处理后其元素描述对象的 el.component 属性值为空字符串：
+        // el.component = ''
+        // 例子二：
+        // <div is="child"></div>
+        // 上例中的 is 属性是非绑定的，但是有一个字符串值，则最终如上标签经过处理后其元素描述对象的 el.component 属性值为：
+        // el.component = JSON.stringify('child')
+        // 例子三：
+        // <div :is="child"></div>
+        // 上例中的 is 属性是绑定的，并且有一个字符串值，则最终如上标签经过处理后其元素描述对象的 el.component 属性值为：
+        // el.component = 'child'
     }
+    // 处理component组件上的inline-template属性值 inline-template不是绑定属性
     if (getAndRemoveAttr(el, 'inline-template') != null) {
+        // 如果获取成功把当前元素描述对象上的inlineTemplate属性设置为true 说明该标签使用了inlineTemplate属性
         el.inlineTemplate = true
     }
 }
 
+// 处理剩余元素
 function processAttrs(el) {
+
+    // 定义一个list  它是el.attrsList得数组引用
     const list = el.attrsList
     let i, l, name, rawName, value, modifiers, syncGen, isDynamic
+
+    // 循环的目的就是遍历el.attrsList数组 也就是说逐步处理el.attrsList剩余属性的值
     for (i = 0, l = list.length; i < l; i++) {
-        name = rawName = list[i].name
-        value = list[i].value
+        name = rawName = list[i].name // 属性的名字
+        value = list[i].value //属性对应的值
+
+        // 检测标签属性名是否是指令
+        // v-开头的属性都被认为是指令 @是v-on的缩写 :是v-bind的缩写
+        // #是v-slot的缩写
+        // export const dirRE = process.env.VBIND_PROP_SHORTHAND ?
+        // /^v-|^@|^:|^\.|^#/ :
+        // /^v-|^@|^:|^#/
+        // 如果属性的名字以 v- @ : # .开头则走if条件分支 否则走else分支
+
         if (dirRE.test(name)) {
             // mark element as dynamic
+            // 一个完整的指令包含 指令的名称 指令的参数 指令的值 指令的修饰符
+            // 既然元素使用了指令 指令的值就是表达式  既然是指令的值是表达式 那就说明涉及动态内容
+            // 所以此时会在元素描述对象上添加 el.hasBindings 属性，并将其值设置为 true
+            // 标识着当前元素是一个动态的元素。
             el.hasBindings = true
             // modifiers
             modifiers = parseModifiers(name.replace(dirRE, ''))

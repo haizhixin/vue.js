@@ -17,8 +17,7 @@ export function pluckModuleFunction < F: Function > (
     key : string
 ): Array < F > {
     return modules ?
-        modules.map(m => m[key]).filter(_ => _) :
-        []
+        modules.map(m => m[key]).filter(_ => _) : []
 }
 
 export function addProp(el: ASTElement, name: string, value: string, range ? : Range, dynamic ? : boolean) {
@@ -159,7 +158,7 @@ export function getRawBindingAttr(
         el.rawAttrsMap[name]
 }
 
-// 获取绑定属性的值
+// 获取绑定属性的值 如果获取成功会将获取到的值用parseFilters函数进行处理 并将它处理好后的结果作为getBindingAttr函数的返回值
 export function getBindingAttr(
     el: ASTElement,
     name: string,
@@ -170,9 +169,9 @@ export function getBindingAttr(
     const dynamicValue =
         getAndRemoveAttr(el, ':' + name) ||
         getAndRemoveAttr(el, 'v-bind:' + name)
-     // if条件语句是判断绑定的属性是否存在 而不是绑定属性的属性值是否存在
-     // 因为绑定属性值不存在 dynamicValue的值为"" ""!=null仍成立 
-     // 只有绑定属性不存在 dynamicValue的值为undefined  undefined!=null不成立 才会走else if条件
+    // if条件语句是判断绑定的属性是否存在 而不是绑定属性的属性值是否存在
+    // 因为绑定属性值不存在 dynamicValue的值为"" ""!=null仍成立
+    // 只有绑定属性不存在 dynamicValue的值为undefined  undefined!=null不成立 才会走else if条件
     if (dynamicValue != null) {
         // 处理绑定的属性值 绑定的属性值是可以使用过滤器的 parseFilters函数是用来解析过滤器的
         return parseFilters(dynamicValue)
@@ -197,12 +196,12 @@ export function getBindingAttr(
         // }
         // 当你执行 f1() 函数时，在控制台会得到输出数字 1，而当你执行 fn2 函数时则不会得到任何输出，
         if (staticValue != null) {
-        return JSON.stringify(staticValue)
-        // 使用JSON.stringify的原因是确保非绑定属性的值始终是一个字符串而非一个表达式
-     }
+            return JSON.stringify(staticValue)
+            // 使用JSON.stringify的原因是确保非绑定属性的值始终是一个字符串而非一个表达式
+        }
     }
- }
-      
+}
+
 // note: this only removes the attr from the Array (attrsList) so that it
 // doesn't get processed by processAttrs.
 // By default it does NOT remove it from the map (attrsMap) because the map is
@@ -219,7 +218,7 @@ export function getAndRemoveAttr(
     // 因为el的属性对象attrsMap中保存的是该元素所有属性的名值对对应表,因此获取属性指的方式是
     // 直接用获取属性的的名字和 attrsMap对象中的属性去匹配 并将匹配到的结果与null进行对比
     // 如果匹配结果不为null 说明能匹配到值
-    // 如果 el.attrsMap[name] 的值不为 undefined null 不进行删除操作 只返回 el.attrsMap[name]属性值
+    // 如果 el.attrsMap[name] 的值为 undefined null 不进行删除操作 只返回 el.attrsMap[name]属性值
     if ((val = el.attrsMap[name]) != null) {
         const list = el.attrsList
         for (let i = 0, l = list.length; i < l; i++) {
