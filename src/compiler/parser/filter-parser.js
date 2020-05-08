@@ -1,5 +1,7 @@
 /* @flow */
 
+// \w包含单词字符(a-z A-Z 0-9 以及下划线_)
+// validDivisionCharRE正则表达式匹配 字母 数字 ) . + - _ $ ]之一
 const validDivisionCharRE = /[\w).+\-_$\]]/
 // 过滤器以管道符 | 分隔 但是不能把所有在绑定属性的值中出现的 | 都作为过滤器管道符
 // 以下五种情况 不是过滤器管道符
@@ -73,10 +75,16 @@ export function parseFilters(exp: string): string {
             !curly && !square && !paren
         ) {
             // 如果当前读取的字符是过滤器的分界线，则会执行这里的代码
+            
             if (expression === undefined) {
+                //第一次遇到作为过滤器分界线的管道分隔符
                 // first filter, end of expression
+                // i是当前遇到的管道符的位置索引  i+1是管道符下一个字符的位置索引
                 lastFilterIndex = i + 1
+                // 对exp字符串进行截取 截取的结束位置刚好是管道符的位置 但不包括管道符 并去掉前后的空格 并把值赋给expression
+                //例如<div :key="id | featId"></div>截取后的值是 id 
                 expression = exp.slice(0, i).trim()
+
             } else {
                 pushFilter()
             }
@@ -142,6 +150,8 @@ export function parseFilters(exp: string): string {
                     if (p !== ' ') break
                 }
                 // 之前没有非空的字符串 或者有非空的字符串 且满足validDivisionCharRE正则表达式说明当前/是正则的开始
+                // 匹配 字母 数字 ) . + - _ $ ]
+                //也就是说 /前如果有非空字符 但是非空字符不能是 单个 字母 数字 ) . + - _ $ ]其中的任何一个 否则就不能认为是正则
                 if (!p || !validDivisionCharRE.test(p)) {
                     inRegex = true
                 }
@@ -154,7 +164,9 @@ export function parseFilters(exp: string): string {
             //我们没必要花大力气在收益很小的地方。
         }
     }
-
+    // for循环结束 i的值是字符串exp的长度
+    // <div :key="id | featId"></div>对于它来说 expression的值为id
+    // 此时expression有值因此会走else if判断条件
     if (expression === undefined) {
         expression = exp.slice(0, i).trim()
     } else if (lastFilterIndex !== 0) {
@@ -162,9 +174,15 @@ export function parseFilters(exp: string): string {
     }
 
     function pushFilter() {
+        // lastFilterIndex为管道符的下一个字符位置索引
+        // i的值是字符串exp的长度
         (filters || (filters = [])).push(exp.slice(lastFilterIndex, i).trim())
+        // <div :key="id | featId"></div>对于它来说 exp.slice(lastFilterIndex, i).trim()的值是 featId
         lastFilterIndex = i + 1
     }
+    // 经过以上处理之后 expression代表着表达式 filters代表着所有过滤器的名字
+//    如 <div :key="id | a | b | c"></div>
+// 那么经过解析，变量 expression 的值将是字符串 'id'，且 filters 数组中将包含三个元素：['a', 'b', 'c']。
 
     if (filters) {
         for (i = 0; i < filters.length; i++) {
