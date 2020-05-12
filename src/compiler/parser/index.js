@@ -60,6 +60,8 @@ export const bindRE = /^:|^\.|^v-bind:/
 const propBindRE = /^\./
 //?=n 量词匹配任何其后紧接指定字符串 n 的字符串。
 // modifierRE匹配修饰符
+// 用来全局匹配字符串中的字符.以及.之后的字符,也就是修饰符
+// (?= (?: (?! (?<= (?<! 为非捕获组
 const modifierRE = /\.[^.\]]+(?=[^\]]*$)/g
 //以 v-slot:开始 或者v-slot结束 或者以#开始
 const slotRE = /^v-slot(:|$)|^#/
@@ -1139,17 +1141,24 @@ function processAttrs(el) {
             // 所以此时会在元素描述对象上添加 el.hasBindings 属性，并将其值设置为 true
             // 标识着当前元素是一个动态的元素。
             el.hasBindings = true
+        
             // modifiers
+            // parseModifiers函数解析指令修饰符并把值给modiers
+            // 如果有修饰符 modifiers的值为 {sync:true} 如果没有修饰符 modifiers的值为undefined
             modifiers = parseModifiers(name.replace(dirRE, ''))
             // support .foo shorthand syntax for the .prop modifier
             if (process.env.VBIND_PROP_SHORTHAND && propBindRE.test(name)) {
                 (modifiers || (modifiers = {})).prop = true
                 name = `.` + name.slice(1).replace(modifierRE, '')
             } else if (modifiers) {
+                // 属性名去掉修饰符// 例如'v-bind:some-prop.sync' 变为'v-bind:some-prop'
                 name = name.replace(modifierRE, '')
             }
+            // bindRE匹配绑定属性 解析绑定属性
             if (bindRE.test(name)) { // v-bind
+                // 去掉v-bind: 或者 :
                 name = name.replace(bindRE, '')
+                // 用过滤器解析属性值 并把处理之后的值返回给value
                 value = parseFilters(value)
                 isDynamic = dynamicArgRE.test(name)
                 if (isDynamic) {
@@ -1283,13 +1292,25 @@ function checkInFor(el: ASTElement): boolean {
     return false
 }
 
+// 接收参数指令名和指令修饰符
 function parseModifiers(name: string): Object | void {
+    // modifierRE匹配指令修饰符
+    // 假设我们的指令字符串为：'v-bind:some-prop.sync'，
+    // 则使用该字符串去匹配正则 modifierRE 最终将会得到一个数组：
+    // [".sync"]。一个指令有几个修饰符，
+    // 则匹配的结果数组中就包含几个元素。如果匹配失败则会得到 null。
     const match = name.match(modifierRE)
     if (match) {
         const ret = {}
+        // 循环match 把match中的每一项都作为ret的属性 由于match中的每一项匹配的是修饰符 因此要用m.slice(1)去掉.
         match.forEach(m => { ret[m.slice(1)] = true })
+        // 最后返回 ret
+        // {
+        //     sync:true
+        // }
         return ret
     }
+    // 如果字符串中不包含修饰符则返回undefined
 }
 
 function makeAttrsMap(attrs: Array < Object > ): Object {
