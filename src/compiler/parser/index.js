@@ -1160,10 +1160,16 @@ function processAttrs(el) {
                 name = name.replace(bindRE, '')
                 // 用过滤器解析属性值 并把处理之后的值返回给value
                 value = parseFilters(value)
+                // 如果属性名为动态属性名
+                // <a v-on:[eventName]="doSomething"> ... </a>
+                // 当 eventName 的值为 “focus” 时，v-on:[eventName] 将等价于 v-on:focus。
                 isDynamic = dynamicArgRE.test(name)
+                // 如果是动态属性名isDynamic为true
                 if (isDynamic) {
+                    // 截取属性名的第一个字符和最后一个字符 即去掉[ 和 ]
                     name = name.slice(1, -1)
                 }
+                // 如果属性值为空 警告提示
                 if (
                     process.env.NODE_ENV !== 'production' &&
                     value.trim().length === 0
@@ -1172,21 +1178,38 @@ function processAttrs(el) {
                         `The value for a v-bind expression cannot be empty. Found in "v-bind:${name}"`
                     )
                 }
+                // 如果有修饰符 修饰符分为三种 prop sync camel
+                // prop原生属性,所谓原生属性就是可以通过DOM元素对象直接访问的有效API
+                // 比如 innerHTML 就是一个原生DOM对象的属性。
                 if (modifiers) {
+                    // 如果是原生绑定属性 且不是动态属性
                     if (modifiers.prop && !isDynamic) {
+                        // 驼峰化name属性名
                         name = camelize(name)
+                        //检查驼峰化之后的属性名是否等于字符串 'innerHtml'，如果属性名全等于该字符串则将属性名重写为字符串 'innerHTML'，我们知道 'innerHTML' 是一个特例，它的 HTML 四个字符串全部为大写。
                         if (name === 'innerHtml') name = 'innerHTML'
                     }
+                    // 如果使用了camel修饰符 且不是动态属性 驼峰化属性名
                     if (modifiers.camel && !isDynamic) {
+                        // 驼峰化属性名
+                        // <svg :view-box.camel="viewBox"></svg>
+                        // 不能直接这样写<svg :viewBox="viewBox"></svg>这是因为对于浏览器来讲，真正的属性名字是 :viewBox 而不是 viewBox，所以浏览器在渲染时会认为这是一个自定义属性，对于任何自定义属性浏览器都会把它渲染为小写的形式，所以当 Vue 尝试获取这段模板字符串的时候，会得到如下字符串：'<svg :viewbox="viewBox"></svg>'这将导致渲染失败，因为 SVG 标签只认 viewBox，却不知道 viewbox 是什么。
                         name = camelize(name)
                     }
+                    // sync是一个语法糖
+                    // <child :some-prop.sync="value" />相当于<child :some-prop="value" @update:someProp="handleEvent" />
+                    // :some-prop.sync <==等价于==> :some-prop + @update:someProp
+                    //因此当使用了.sync修饰符 子组件中应该有一个名为update:${驼峰化的属性名}函数
                     if (modifiers.sync) {
                         syncGen = genAssignmentCode(value, `$event`)
                         if (!isDynamic) {
+                            // addHandler函数的作用实际上就是将事件名称与该事件的侦听函数添加到元素描述对象el.events el.nativeEvents属性中
+                            //第一个参数 元素描述对象
+                            // 第二个参数update加驼峰化的属性名 作为事件的名
                             addHandler(
                                 el,
                                 `update:${camelize(name)}`,
-                                syncGen,
+                                syncGen,// 事件的回调函数
                                 null,
                                 false,
                                 warn,
@@ -1218,11 +1241,26 @@ function processAttrs(el) {
                         }
                     }
                 }
+                // el.component保存的是标签is属性的值
+                // 如果有修饰符且修饰符为原生DOM对象属性 或者标签没有使用is属性
+               
+                // platformMustUseProp函数
+                // input,textarea,option,select,progress 这些标签的 value 属性都应该使用元素对象的原生的 prop 绑定（除了 type === 'button' 之外）
+                // option 标签的 selected 属性应该使用元素对象的原生的 prop 绑定
+                // input 标签的 checked 属性应该使用元素对象的原生的 prop 绑定
+                // video 标签的 muted 属性应该使用元素对象的原生的 prop 绑定
+
+                // 之所以要保证!el.component成立,这是因为platformMustUseProp 函数在判断的时候需要标签的名字(el.tag)，而 el.component 会在元素渲染阶段替换掉 el.tag 的值。所以如果 el.component 存在则会影响 platformMustUseProp 的判断结果。
+
                 if ((modifiers && modifiers.prop) || (
                         !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
                     )) {
+                  // 满足以上条件即使没有使用prop修饰符 依然会被当做原生DOM对象属性
+
+                   // 将属性的名字和值以对象的形式添加到元素描述对象el.props中去
                     addProp(el, name, value, list[i], isDynamic)
                 } else {
+                    // 将属性的名字和值以对象的形式添加到元素描述对象el.attrs数组中去
                     addAttr(el, name, value, list[i], isDynamic)
                 }
             } else if (onRE.test(name)) { // v-on

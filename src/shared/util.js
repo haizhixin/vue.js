@@ -154,6 +154,7 @@ export function hasOwn(obj: Object | Array < * > , key: string): boolean {
 /**
  * Create a cached version of a pure function.
  */
+// 创造一个纯函数的缓存版本
 export function cached < F: Function > (fn: F): F {
     const cache = Object.create(null)
     return (function cachedFn(str: string) {
@@ -165,7 +166,16 @@ export function cached < F: Function > (fn: F): F {
 /**
  * Camelize a hyphen-delimited string.
  */
-const camelizeRE = /-(\w)/g
+// \w 查找单词字符
+
+// https://juejin.im/post/5c6c18146fb9a049e232940c
+// reolace 第一个参数是模式匹配正则  第二个参数是回调函数
+// 回调函数的第一个参数是 匹配到的结果 回调函数对每一个匹配到的结果进行回调操作
+// 回调函数接下来的参数是 匹配该模式中的某个圆括号子表达式的字符串 参数有一个或者多个
+// 倒数第二个参数是匹配结果在字符串中的位置 
+// 最后一个参数 是原字符串
+// 执行全局匹配（查找所有匹配而非在找到第一个匹配后停止）
+const camelizeRE = /-(\w)/g //查找-后紧挨着的第一个字符
 export const camelize = cached((str: string): string => {
     return str.replace(camelizeRE, (_, c) => c ? c.toUpperCase() : '')
 })
@@ -180,7 +190,14 @@ export const capitalize = cached((str: string): string => {
 /**
  * Hyphenate a camelCase string.
  */
+// \B匹配非单词边界
+
+// 这里的单词可以是中文字符,英文字符,数字；
+// 符号可以是中文符号,英文符号,空格,制表符,换行
+// hyphenate('aaaBbb')   // aaa-bbb
+// 全局匹配字符串中的大写字母 且该大写字母前必须不是单词边界
 const hyphenateRE = /\B([A-Z])/g
+// $1代表捕获组捕获到的大写字母是个变量
 export const hyphenate = cached((str: string): string => {
     return str.replace(hyphenateRE, '-$1').toLowerCase()
 })
