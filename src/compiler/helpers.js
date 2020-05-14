@@ -49,6 +49,7 @@ export function addDirective(
     modifiers: ? ASTModifiers,
     range ? : Range
 ) {
+    // 在 addDirective 函数体内，首先判断了元素描述对象的 el.directives 是否存在，如果不存在则先将其初始化一个空数组，然后再使用 push 方法添加一个指令信息对象到 el.directives 数组中，如果 el.directives 属性已经存在，则直接使用 push 方法将指令信息对象添加到 el.directives 数组中
     (el.directives || (el.directives = [])).push(rangeSetItem({
         name,
         rawName,
@@ -57,6 +58,17 @@ export function addDirective(
         isDynamicArg,
         modifiers
     }, range))
+
+    // {
+    //     name,
+    //     rawName,
+    //     value,
+    //     arg,
+    //     isDynamicArg,
+    //     modifiers
+    // }指令信息对象
+   
+    //设置当前元素描述对象为非纯对象
     el.plain = false
 }
 
@@ -66,19 +78,24 @@ function prependModifierMarker(symbol: string, name: string, dynamic ? : boolean
         symbol + name // mark the event as captured
 }
 
+// addHandler 函数的作用实际上就是将事件名称
+// 与该事件的侦听函数添加到元素描述对象的 el.events 属性
+// 或 el.nativeEvents 属性中。
 export function addHandler(
-    el: ASTElement,
-    name: string,
-    value: string,
-    modifiers: ? ASTModifiers,
-    important ? : boolean,
-    warn ? : ? Function,
+    el: ASTElement,//当前元素描述对象
+    name: string, // 绑定属性的名字 即事件名称
+    value: string,// 事件回调函数的名字或 函数表达式或内联语句 
+    modifiers: ? ASTModifiers,//  指令对象
+    important ? : boolean,// 可选参数 是个boolean值 代表着添加事件侦听函数的重要 级别如果为 true，则该侦听函数会被添加到该事件侦听函数数组的头部，否则会将其添加到尾部，
+    warn ? : ? Function,//打印警告信息 可选参数
     range ? : Range,
     dynamic ? : boolean
 ) {
+    // 检测v-on指令的修饰符对象是否存在 如果存在 使用一个冻结了的空对象
     modifiers = modifiers || emptyObject
     // warn prevent and passive modifier
     /* istanbul ignore if */
+    // prevent和passive修饰符不能同时存在 因为prevent修饰符是用来告诉浏览器该事件监听函数是不会阻止默认行为的
     if (
         process.env.NODE_ENV !== 'production' && warn &&
         modifiers.prevent && modifiers.passive
@@ -93,60 +110,87 @@ export function addHandler(
     // normalize click.right and click.middle since they don't actually fire
     // this is technically browser-specific, but at least for now browsers are
     // the only target envs that have right/middle clicks.
+    // 规范化右击事件和点击鼠标中间按钮的事件
     if (modifiers.right) {
         if (dynamic) {
             name = `(${name})==='click'?'contextmenu':(${name})`
         } else if (name === 'click') {
+            // 浏览器中点击右键一般会出来一个菜单，这本质上是触发了 contextmenu 事件。
+            // Vue 中定义“右击”事件的方式是为 click 事件添加 right 修饰符。所以如上代码中首先检查了事件名称是否是 click，如果事件名称是 click 并且使用了 right 修饰符，则会将事件名称重写为 contextmenu
             name = 'contextmenu'
             delete modifiers.right
         }
+        // Vue 中定义点击滚轮事件的方式是为 click 事件指定 middle 修饰符，
     } else if (modifiers.middle) {
         if (dynamic) {
             name = `(${name})==='click'?'mouseup':(${name})`
         } else if (name === 'click') {
             name = 'mouseup'
+
+            // 我们知道鼠标本没有滚轮点击事件，一般我们区分用户点击的按钮是不是滚轮的方式是监听 mouseup 事件，然后通过事件对象的 event.button 属性值来判断，如果 event.button === 1 则说明用户点击的是滚轮按钮。
         }
     }
 
     // check capture modifier
+    // dynamic是否是动态选项
     if (modifiers.capture) {
+        // 删除capture选项
         delete modifiers.capture
+        // 然后在事件名字前加上你!
         name = prependModifierMarker('!', name, dynamic)
     }
+
+    // <div @click.once="handleClick"></div>等价于<div @~click="handleClick"></div>
     if (modifiers.once) {
+        // 删除once选项
         delete modifiers.once
         name = prependModifierMarker('~', name, dynamic)
     }
     /* istanbul ignore if */
     if (modifiers.passive) {
+        // 删除passive选项
         delete modifiers.passive
         name = prependModifierMarker('&', name, dynamic)
     }
 
-    let events
-    if (modifiers.native) {
+    let events //定义了events变量
+    if (modifiers.native) {// 如果有native修饰符
         delete modifiers.native
+        // 在元素描述对象上添加nativeEventts 属性 并赋值给events
         events = el.nativeEvents || (el.nativeEvents = {})
     } else {
+        // 如果没有native修饰符 在元素描述对象上添加events属性 并赋值给events
         events = el.events || (el.events = {})
     }
-
+    
+    // 定义一个对象 value是 v-on属性的值
     const newHandler: any = rangeSetItem({ value: value.trim(), dynamic }, range)
+    // 如果没有使用修饰符 modifiers的值就是emptyObject
+    // modifiers 不等于 emptyObject 则说明事件使用了修饰符
     if (modifiers !== emptyObject) {
         newHandler.modifiers = modifiers
     }
 
+    //第一次调用addHandler函数 events为空对象所以 handlers的值为undefined
     const handlers = events[name]
     /* istanbul ignore if */
     if (Array.isArray(handlers)) {
+        // <div @click.prevent="handleClick1" @click="handleClick2" @click.self="handleClick3"></div>同一个属性名对应多个绑定事件
+        // important 所影响的就是事件作用的顺序，所以根据 important 参数的不同，会选择使用数组的 unshift 方法将新添加的事件信息对象放到数组的头部，或者选择数组的 push 方法将新添加的事件信息对象放到数组的尾部。
         important ? handlers.unshift(newHandler) : handlers.push(newHandler)
     } else if (handlers) {
+        // <div @click.prevent="handleClick1" @click="handleClick2"></div>
+        // 两个 click 事件的侦听，其中一个 click 事件使用了 prevent 修饰符，而另外一个 click 事件则没有使用修饰符，所以这两个 click 事件是不同，但这两个事件的名称却是相同的，都是 'click'，所以这将导致调用两次 addHandler 函数添加两次名称相同的事件，
         events[name] = important ? [newHandler, handlers] : [handlers, newHandler]
     } else {
+        // 为 events 对象定义了与事件名称相同的属性，并以 newHandler 对象作为属性值
         events[name] = newHandler
     }
-
+    // 如果一个事件存在事件监听 这个元素一定不是纯的 这里直接将plain设置为false
     el.plain = false
+
+    // addHandler 函数对于元素描述对象的影响主要是在
+    // 元素描述对象上添加了 el.events 属性和 el.nativeEvents 属性。
 }
 
 export function getRawBindingAttr(
@@ -251,6 +295,7 @@ export function getAndRemoveAttrByRegex(
     }
 }
 
+// 设置属性的范围
 function rangeSetItem(
     item: any,
     range ? : { start ? : number, end ? : number }

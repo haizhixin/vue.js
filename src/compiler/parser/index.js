@@ -1133,7 +1133,8 @@ function processAttrs(el) {
         // /^v-|^@|^:|^\.|^#/ :
         // /^v-|^@|^:|^#/
         // 如果属性的名字以 v- @ : # .开头则走if条件分支 否则走else分支
-
+       
+        // 解析指令属性
         if (dirRE.test(name)) {
             // mark element as dynamic
             // 一个完整的指令包含 指令的名称 指令的参数 指令的值 指令的修饰符
@@ -1263,35 +1264,96 @@ function processAttrs(el) {
                     // 将属性的名字和值以对象的形式添加到元素描述对象el.attrs数组中去
                     addAttr(el, name, value, list[i], isDynamic)
                 }
-            } else if (onRE.test(name)) { // v-on
+                // 使用onRE正则去匹配指令字符串
+            } else if (onRE.test(name)) { // v-on onRE匹配@和v-on:开头的指令
+                // 匹配成功 去掉@或者v-on:
                 name = name.replace(onRE, '')
+                // 匹配动态绑定属性
                 isDynamic = dynamicArgRE.test(name)
+                // 如果是动态属性
                 if (isDynamic) {
+                    // 去掉[ 和 ]
                     name = name.slice(1, -1)
                 }
+                // 直接调用addHandler函数 第五个参数为important 
+                // 它影响的是新添加的事件信息对象的顺序，这里 important 参数为 false，所以使用 v-on 添加的事件侦听函数将按照添加的顺序被先后执行。
                 addHandler(el, name, value, modifiers, false, warn, list[i], isDynamic)
             } else { // normal directives
+                // 既不是v-on指令 也不是v-bind指令 也不是前面已经用process函数处理过的元素 此时执行else分支
+                
+// Vue 内置提供的所有指令	是否已经被解析	解析函数
+// v-if	                  是	         processIf
+// v-else-if	          是	         processIf
+// v-else	              是	         processIf
+// v-for	              是	         processFor
+// v-on	                  是	         processAttrs
+// v-bind	              是	         processAttrs
+// v-pre	              是	         processPre
+// v-once	              是	         processOnce
+// v-text	              否	         无
+// v-html	              否	         无
+// v-show	              否	         无
+// v-cloak	              否	         无
+// v-model	              否	         无
+// v-text v-html v-show v-cloak v-model 以及其他自定义指令会执行以下代码
+        // 去掉v- 或者 :或者 @        
                 name = name.replace(dirRE, '')
+                // processAttrs 函数中每解析一个指令时都优先使用 parseModifiers 函数将修饰符解析完毕了，并且修饰符相关的字符串已经被移除，所以如上代码中的 name 变量中将不会包含修饰符字符串。
                 // parse arg
+                // argRE匹配指令参数
+                
+              // 假设现在 name 变量的值为 custom:arg
+                // 最终const argMatch = [':arg', 'arg']
                 const argMatch = name.match(argRE)
+                // arg为参数的名字
                 let arg = argMatch && argMatch[1]
+                
                 isDynamic = false
-                if (arg) {
+                if (arg) {// 如果有参数
+                    // 去掉指令的参数以及: 只保留name属性 因此用-(arg.length+1)字符最后一位向前推
                     name = name.slice(0, -(arg.length + 1))
                     if (dynamicArgRE.test(arg)) {
                         arg = arg.slice(1, -1)
                         isDynamic = true
                     }
                 }
+                // 假设指令为：v-custom:arg.modif="myMethod"
+                // addDirective(el, 'custom', 'v-custom:arg.modif', 'myMethod', 'arg', { modif: true })
                 addDirective(el, name, rawName, value, arg, isDynamic, modifiers, list[i])
+                // 以上就是对剩余的5个指令以及自定义的指令进行的解析
+                // 解析完毕会在el对象上的directives数组属性中添加
+                //    一个指令信息对象
+                // el.directives = [
+                //   {
+                //     name, // 指令名字
+                //     rawName, // 指令原始名字
+                //     value, // 指令的属性值
+                //     arg, // 指令的参数
+                //     modifiers // 指令的修饰符
+                //   }
+                // ]
+                
                 if (process.env.NODE_ENV !== 'production' && name === 'model') {
+                     //如果指令名称为model 对其进行检查
                     checkForAliasModel(el, value)
                 }
             }
-        } else {
+        } else {//解析非指令属性
+        
+            // key
+            // ref
+            // slot、slot-scope、scope、name
+            // is、inline-template这些非指令属性已经被解析完毕 因此这里不会在处理 
+            // 这里解析的指令诸如 id width 等 但是class和style会在中置处理钩子中进行处理 而不是在processAttrs
+
             // literal attribute
             if (process.env.NODE_ENV !== 'production') {
+                
+                // parseText用来解析字面量表达式 
+                // <div id="{{ isTrue ? 'a' : 'b' }}"></div>其中符串 "b" 就是字面量表达式
                 const res = parseText(value, delimiters)
+                // 如果使用 parseText 函数能够成功解析某个非指令属性的属性值字符串，则说明该非指令属性的属性值使用了字面量表达式
+                // 此时提示打印警告信息 告诉开发者使用绑定属性
                 if (res) {
                     warn(
                         `${name}="${value}": ` +
@@ -1302,9 +1364,17 @@ function processAttrs(el) {
                     )
                 }
             }
+            // 对于任何非指令对象 都会把属性以及该属性对应的字符串值添加到对应的元素描述对象el.attrs数组中
             addAttr(el, name, JSON.stringify(value), list[i])
             // #6887 firefox doesn't update muted state if set via attribute
             // even immediately after element creation
+            
+            // 实际上元素描述对象的 el.attrs 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用 setAttribute 方法将属性添加到真实DOM元素上，
+            // 而在火狐浏览器中存在无法通过DOM元素的 setAttribute 方法为 video 标签添加 muted 属性的问题
+            // 所以如下代码就是为了解决该问题的，其方案是如果一个属性的名字是 muted 并且该标签满足 platformMustUseProp 函数(video 标签满足)，则会额外调用 addProp 函数将属性添加到元素描述对象的 el.props 数组中。
+            // 为什么这么做呢？这是因为元素描述对象的 el.props 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加，
+            // 也就是说对于 <video> 标签的 muted 属性的添加方式为：videoEl.muted = true。
+           
             if (!el.component &&
                 name === 'muted' &&
                 platformMustUseProp(el.tag, el.attrsMap.type, name)) {
@@ -1423,6 +1493,10 @@ function guardIESVGBug(attrs) {
 function checkForAliasModel(el, value) {
     let _el = el
     while (_el) {
+        // 如果使用了model指令的当前元素的 上一级直到根标签 使用了for循环 且model的属性值对应 for循环 in前()的第一个变量
+        // <div v-for="obj of list">
+        // <input v-model="obj.item" />
+        // </div>这里的list必须为对象数组 否则v-model指令无效
         if (_el.for && _el.alias === value) {
             warn(
                 `<${el.tag} v-model="${value}">: ` +
