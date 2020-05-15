@@ -25,9 +25,17 @@ function transformNode (el: ASTElement, options: CompilerOptions) {
         )
       }
     }
+    // 非绑定的属性保存在元素描述对象的staticStyle中
+    // <div style="color: red; background: green;"></div>
+    // el.staticStyle = JSON.stringify({
+    //   color: 'red',
+    //   background: 'green'
+    // })
     el.staticStyle = JSON.stringify(parseStyleText(staticStyle))
   }
-
+  // 绑定的 style 属性值保存在元素描述对象的 el.styleBinding 属性中
+  // <div :style="{ fontSize: fontSize + 'px' }"></div>
+  // el.styleBinding = "{ fontSize: fontSize + 'px' }"
   const styleBinding = getBindingAttr(el, 'style', false /* getStatic */)
   if (styleBinding) {
     el.styleBinding = styleBinding

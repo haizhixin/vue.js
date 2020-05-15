@@ -389,6 +389,7 @@ export function parse(
                 // preTransforms 和 transforms、postTransforms 和process系列函数没有什么区别
                 // 都是为了对当前元素的描述对象进行进一步处理 之所以把他们和process系列函数区分开 就是出于平台化的考虑
                 // 我们知道这些函数 来自不同的平台
+                //通过预处理后得到了新的元素描述对象  用新的元素描述对象替换当前的元素描述对象 否则依然使用当前的元素描述对象
                 element = preTransforms[i](element, options) || element
             }
 
@@ -452,9 +453,12 @@ export function parse(
         },
         // 结束标签的钩子函数
         end(tag, start, end) {
+
             const element = stack[stack.length - 1]
             // pop stack
+            // 将当前节点出栈
             stack.length -= 1
+            // 读取出栈后最后一个元素作为currentParent值 把 currentParent 变量的引用修改为当前标签的父标签，
             currentParent = stack[stack.length - 1]
             if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
                 element.end = end
@@ -462,7 +466,9 @@ export function parse(
             closeElement(element)
         },
         // 纯文本钩子函数
+        // 当解析器遇到文本节点时 会执行如下钩子函数
         chars(text: string, start: number, end: number) {
+            //当前节点的父节点不存在
             if (!currentParent) {
                 if (process.env.NODE_ENV !== 'production') {
                     if (text === template) {

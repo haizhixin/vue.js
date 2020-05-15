@@ -23,8 +23,11 @@ import {
   createASTElement
 } from 'compiler/parser/index'
 
+// el当前元素选项参数 options 编译器选项参数
 function preTransformNode (el: ASTElement, options: CompilerOptions) {
+  // 前置处理只处理input标签 只有当前解析的标签是input标签 才会执行预处理工作
   if (el.tag === 'input') {
+    //如果是input标签 且没有使用v-model属性直接返回也不进行处理
     const map = el.attrsMap
     if (!map['v-model']) {
       return
@@ -34,11 +37,14 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
     if (map[':type'] || map['v-bind:type']) {
       typeBinding = getBindingAttr(el, 'type')
     }
+    // <input v-model="val" v-bind="{ type: inputType }" />
     if (!map.type && !typeBinding && map['v-bind']) {
       typeBinding = `(${map['v-bind']}).type`
     }
+    // 以上说明preTransformNode函数要预处理的是使用了v-model属性并且使用了绑定的type属性的input标签
 
     if (typeBinding) {
+      //ifCondition通过getAndRemoveAttr取得的v-if指令的属性值
       const ifCondition = getAndRemoveAttr(el, 'v-if', true)
       const ifConditionExtra = ifCondition ? `&&(${ifCondition})` : ``
       const hasElse = getAndRemoveAttr(el, 'v-else', true) != null
@@ -86,6 +92,8 @@ function preTransformNode (el: ASTElement, options: CompilerOptions) {
 }
 
 function cloneASTElement (el) {
+  // 克隆一个元素描述对象 由于attrsList是一个数组是引用类型 为了避免克隆的元素描述对象与原始描述对象
+  // 互相干扰 所以用slice复刻出一个新的el.attrList数组
   return createASTElement(el.tag, el.attrsList.slice(), el.parent)
 }
 
