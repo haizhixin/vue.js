@@ -4,6 +4,8 @@ import { cached, extend, toObject } from 'shared/util'
 
 export const parseStyleText = cached(function (cssText) {
   const res = {}
+  // ?!正向否定查找 该分号的后面不能跟左圆括号)，除非有一个相应的右圆括号(存在
+  // (?![^(]) 不是是非(它的值 说明可以是(
   const listDelimiter = /;(?![^(]*\))/g
   const propertyDelimiter = /:(.+)/
   cssText.split(listDelimiter).forEach(function (item) {
@@ -12,6 +14,12 @@ export const parseStyleText = cached(function (cssText) {
       tmp.length > 1 && (res[tmp[0].trim()] = tmp[1].trim())
     }
   })
+  // <div style="color: red; background: green;"></div>
+  //处理后最终值
+  // [
+  //   'color: red',
+  //   'background: green'
+  // ]
   return res
 })
 

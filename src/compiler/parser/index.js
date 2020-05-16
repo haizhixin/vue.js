@@ -60,6 +60,8 @@ export const bindRE = /^:|^\.|^v-bind:/
 const propBindRE = /^\./
 //?=n 量词匹配任何其后紧接指定字符串 n 的字符串。
 // modifierRE匹配修饰符
+// 用来全局匹配字符串中的字符.以及.之后的字符,也就是修饰符
+// (?= (?: (?! (?<= (?<! 为非捕获组
 const modifierRE = /\.[^.\]]+(?=[^\]]*$)/g
 //以 v-slot:开始 或者v-slot结束 或者以#开始
 const slotRE = /^v-slot(:|$)|^#/
@@ -387,6 +389,7 @@ export function parse(
                 // preTransforms 和 transforms、postTransforms 和process系列函数没有什么区别
                 // 都是为了对当前元素的描述对象进行进一步处理 之所以把他们和process系列函数区分开 就是出于平台化的考虑
                 // 我们知道这些函数 来自不同的平台
+                //通过预处理后得到了新的元素描述对象  用新的元素描述对象替换当前的元素描述对象 否则依然使用当前的元素描述对象
                 element = preTransforms[i](element, options) || element
             }
 
@@ -450,9 +453,12 @@ export function parse(
         },
         // 结束标签的钩子函数
         end(tag, start, end) {
+
             const element = stack[stack.length - 1]
             // pop stack
+            // 将当前节点出栈
             stack.length -= 1
+            // 读取出栈后最后一个元素作为currentParent值 把 currentParent 变量的引用修改为当前标签的父标签，
             currentParent = stack[stack.length - 1]
             if (process.env.NODE_ENV !== 'production' && options.outputSourceRange) {
                 element.end = end
@@ -460,7 +466,9 @@ export function parse(
             closeElement(element)
         },
         // 纯文本钩子函数
+        // 当解析器遇到文本节点时 会执行如下钩子函数
         chars(text: string, start: number, end: number) {
+            //当前节点的父节点不存在
             if (!currentParent) {
                 if (process.env.NODE_ENV !== 'production') {
                     if (text === template) {
@@ -1132,6 +1140,7 @@ function processAttrs(el) {
         // /^v-|^@|^:|^#/
         // 如果属性的名字以 v- @ : # .开头则走if条件分支 否则走else分支
 
+        // 解析指令属性
         if (dirRE.test(name)) {
             // mark element as dynamic
             // 一个完整的指令包含 指令的名称 指令的参数 指令的值 指令的修饰符
@@ -1139,22 +1148,35 @@ function processAttrs(el) {
             // 所以此时会在元素描述对象上添加 el.hasBindings 属性，并将其值设置为 true
             // 标识着当前元素是一个动态的元素。
             el.hasBindings = true
+
             // modifiers
+            // parseModifiers函数解析指令修饰符并把值给modiers
+            // 如果有修饰符 modifiers的值为 {sync:true} 如果没有修饰符 modifiers的值为undefined
             modifiers = parseModifiers(name.replace(dirRE, ''))
             // support .foo shorthand syntax for the .prop modifier
             if (process.env.VBIND_PROP_SHORTHAND && propBindRE.test(name)) {
                 (modifiers || (modifiers = {})).prop = true
                 name = `.` + name.slice(1).replace(modifierRE, '')
             } else if (modifiers) {
+                // 属性名去掉修饰符// 例如'v-bind:some-prop.sync' 变为'v-bind:some-prop'
                 name = name.replace(modifierRE, '')
             }
+            // bindRE匹配绑定属性 解析绑定属性
             if (bindRE.test(name)) { // v-bind
+                // 去掉v-bind: 或者 :
                 name = name.replace(bindRE, '')
+                // 用过滤器解析属性值 并把处理之后的值返回给value
                 value = parseFilters(value)
+                // 如果属性名为动态属性名
+                // <a v-on:[eventName]="doSomething"> ... </a>
+                // 当 eventName 的值为 “focus” 时，v-on:[eventName] 将等价于 v-on:focus。
                 isDynamic = dynamicArgRE.test(name)
+                // 如果是动态属性名isDynamic为true
                 if (isDynamic) {
+                    // 截取属性名的第一个字符和最后一个字符 即去掉[ 和 ]
                     name = name.slice(1, -1)
                 }
+                // 如果属性值为空 警告提示
                 if (
                     process.env.NODE_ENV !== 'production' &&
                     value.trim().length === 0
@@ -1163,24 +1185,38 @@ function processAttrs(el) {
                         `The value for a v-bind expression cannot be empty. Found in "v-bind:${name}"`
                     )
                 }
-                // 如果由修饰符 v-bind: 为开发者提供了三个修饰符 prop camel sync
+                // 如果有修饰符 修饰符分为三种 prop sync camel
+                // prop原生属性,所谓原生属性就是可以通过DOM元素对象直接访问的有效API
+                // 比如 innerHTML 就是一个原生DOM对象的属性。
                 if (modifiers) {
-                    // 如果使用了prop 该对象将被作为原生DOM对象属性
+                    // 如果是原生绑定属性 且不是动态属性
                     if (modifiers.prop && !isDynamic) {
-                        //驼峰化属性名
+                        // 驼峰化name属性名
                         name = camelize(name)
+                        //检查驼峰化之后的属性名是否等于字符串 'innerHtml'，如果属性名全等于该字符串则将属性名重写为字符串 'innerHTML'，我们知道 'innerHTML' 是一个特例，它的 HTML 四个字符串全部为大写。
                         if (name === 'innerHtml') name = 'innerHTML'
                     }
+                    // 如果使用了camel修饰符 且不是动态属性 驼峰化属性名
                     if (modifiers.camel && !isDynamic) {
+                        // 驼峰化属性名
+                        // <svg :view-box.camel="viewBox"></svg>
+                        // 不能直接这样写<svg :viewBox="viewBox"></svg>这是因为对于浏览器来讲，真正的属性名字是 :viewBox 而不是 viewBox，所以浏览器在渲染时会认为这是一个自定义属性，对于任何自定义属性浏览器都会把它渲染为小写的形式，所以当 Vue 尝试获取这段模板字符串的时候，会得到如下字符串：'<svg :viewbox="viewBox"></svg>'这将导致渲染失败，因为 SVG 标签只认 viewBox，却不知道 viewbox 是什么。
                         name = camelize(name)
                     }
+                    // sync是一个语法糖
+                    // <child :some-prop.sync="value" />相当于<child :some-prop="value" @update:someProp="handleEvent" />
+                    // :some-prop.sync <==等价于==> :some-prop + @update:someProp
+                    //因此当使用了.sync修饰符 子组件中应该有一个名为update:${驼峰化的属性名}函数
                     if (modifiers.sync) {
                         syncGen = genAssignmentCode(value, `$event`)
                         if (!isDynamic) {
+                            // addHandler函数的作用实际上就是将事件名称与该事件的侦听函数添加到元素描述对象el.events el.nativeEvents属性中
+                            //第一个参数 元素描述对象
+                            // 第二个参数update加驼峰化的属性名 作为事件的名
                             addHandler(
                                 el,
                                 `update:${camelize(name)}`,
-                                syncGen,
+                                syncGen, // 事件的回调函数
                                 null,
                                 false,
                                 warn,
@@ -1212,42 +1248,118 @@ function processAttrs(el) {
                         }
                     }
                 }
+                // el.component保存的是标签is属性的值
+                // 如果有修饰符且修饰符为原生DOM对象属性 或者标签没有使用is属性
+
+                // platformMustUseProp函数
+                // input,textarea,option,select,progress 这些标签的 value 属性都应该使用元素对象的原生的 prop 绑定（除了 type === 'button' 之外）
+                // option 标签的 selected 属性应该使用元素对象的原生的 prop 绑定
+                // input 标签的 checked 属性应该使用元素对象的原生的 prop 绑定
+                // video 标签的 muted 属性应该使用元素对象的原生的 prop 绑定
+
+                // 之所以要保证!el.component成立,这是因为platformMustUseProp 函数在判断的时候需要标签的名字(el.tag)，而 el.component 会在元素渲染阶段替换掉 el.tag 的值。所以如果 el.component 存在则会影响 platformMustUseProp 的判断结果。
+
                 if ((modifiers && modifiers.prop) || (
                         !el.component && platformMustUseProp(el.tag, el.attrsMap.type, name)
                     )) {
+                    // 满足以上条件即使没有使用prop修饰符 依然会被当做原生DOM对象属性
+
+                    // 将属性的名字和值以对象的形式添加到元素描述对象el.props中去
                     addProp(el, name, value, list[i], isDynamic)
                 } else {
+                    // 将属性的名字和值以对象的形式添加到元素描述对象el.attrs数组中去
                     addAttr(el, name, value, list[i], isDynamic)
                 }
-            } else if (onRE.test(name)) { // v-on
+                // 使用onRE正则去匹配指令字符串
+            } else if (onRE.test(name)) { // v-on onRE匹配@和v-on:开头的指令
+                // 匹配成功 去掉@或者v-on:
                 name = name.replace(onRE, '')
+                // 匹配动态绑定属性
                 isDynamic = dynamicArgRE.test(name)
+                // 如果是动态属性
                 if (isDynamic) {
+                    // 去掉[ 和 ]
                     name = name.slice(1, -1)
                 }
+                // 直接调用addHandler函数 第五个参数为important
+                // 它影响的是新添加的事件信息对象的顺序，这里 important 参数为 false，所以使用 v-on 添加的事件侦听函数将按照添加的顺序被先后执行。
                 addHandler(el, name, value, modifiers, false, warn, list[i], isDynamic)
             } else { // normal directives
+                // 既不是v-on指令 也不是v-bind指令 也不是前面已经用process函数处理过的元素 此时执行else分支
+
+                // Vue 内置提供的所有指令	是否已经被解析	解析函数
+                // v-if	                  是	         processIf
+                // v-else-if	          是	         processIf
+                // v-else	              是	         processIf
+                // v-for	              是	         processFor
+                // v-on	                  是	         processAttrs
+                // v-bind	              是	         processAttrs
+                // v-pre	              是	         processPre
+                // v-once	              是	         processOnce
+                // v-text	              否	         无
+                // v-html	              否	         无
+                // v-show	              否	         无
+                // v-cloak	              否	         无
+                // v-model	              否	         无
+                // v-text v-html v-show v-cloak v-model 以及其他自定义指令会执行以下代码
+                // 去掉v- 或者 :或者 @
                 name = name.replace(dirRE, '')
+                // processAttrs 函数中每解析一个指令时都优先使用 parseModifiers 函数将修饰符解析完毕了，并且修饰符相关的字符串已经被移除，所以如上代码中的 name 变量中将不会包含修饰符字符串。
                 // parse arg
+                // argRE匹配指令参数
+
+                // 假设现在 name 变量的值为 custom:arg
+                // 最终const argMatch = [':arg', 'arg']
                 const argMatch = name.match(argRE)
+                // arg为参数的名字
                 let arg = argMatch && argMatch[1]
+
                 isDynamic = false
-                if (arg) {
+                if (arg) { // 如果有参数
+                    // 去掉指令的参数以及: 只保留name属性 因此用-(arg.length+1)字符最后一位向前推
                     name = name.slice(0, -(arg.length + 1))
                     if (dynamicArgRE.test(arg)) {
                         arg = arg.slice(1, -1)
                         isDynamic = true
                     }
                 }
+                // 假设指令为：v-custom:arg.modif="myMethod"
+                // addDirective(el, 'custom', 'v-custom:arg.modif', 'myMethod', 'arg', { modif: true })
                 addDirective(el, name, rawName, value, arg, isDynamic, modifiers, list[i])
+                // 以上就是对剩余的5个指令以及自定义的指令进行的解析
+                // 解析完毕会在el对象上的directives数组属性中添加
+                //    一个指令信息对象
+                // el.directives = [
+                //   {
+                //     name, // 指令名字
+                //     rawName, // 指令原始名字
+                //     value, // 指令的属性值
+                //     arg, // 指令的参数
+                //     modifiers // 指令的修饰符
+                //   }
+                // ]
+
                 if (process.env.NODE_ENV !== 'production' && name === 'model') {
+                    //如果指令名称为model 对其进行检查
                     checkForAliasModel(el, value)
                 }
             }
-        } else {
+        } else { //解析非指令属性
+
+            // key
+            // ref
+            // slot、slot-scope、scope、name
+            // is、inline-template这些非指令属性已经被解析完毕 因此这里不会在处理
+            // 这里解析的指令诸如 id width 等 但是class和style会在中置处理钩子中进行处理 而不是在processAttrs
+
             // literal attribute
             if (process.env.NODE_ENV !== 'production') {
+
+                // parseText用来解析字面量表达式
+                // <div id="{{ isTrue ? 'a' : 'b' }}"></div>其中符串 "b" 就是字面量表达式
                 const res = parseText(value, delimiters)
+                // 如果使用 parseText 函数能够成功解析某个非指令属性的属性值字符串，则说明该非指令属性的属性值使用了字面量表达式
+                // 此时提示打印警告信息 告诉开发者使用绑定属性
                 if (res) {
                     warn(
                         `${name}="${value}": ` +
@@ -1258,9 +1370,17 @@ function processAttrs(el) {
                     )
                 }
             }
+            // 对于任何非指令对象 都会把属性以及该属性对应的字符串值添加到对应的元素描述对象el.attrs数组中
             addAttr(el, name, JSON.stringify(value), list[i])
             // #6887 firefox doesn't update muted state if set via attribute
             // even immediately after element creation
+
+            // 实际上元素描述对象的 el.attrs 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中使用 setAttribute 方法将属性添加到真实DOM元素上，
+            // 而在火狐浏览器中存在无法通过DOM元素的 setAttribute 方法为 video 标签添加 muted 属性的问题
+            // 所以如下代码就是为了解决该问题的，其方案是如果一个属性的名字是 muted 并且该标签满足 platformMustUseProp 函数(video 标签满足)，则会额外调用 addProp 函数将属性添加到元素描述对象的 el.props 数组中。
+            // 为什么这么做呢？这是因为元素描述对象的 el.props 数组中所存储的任何属性都会在由虚拟DOM创建真实DOM的过程中直接使用真实DOM对象添加，
+            // 也就是说对于 <video> 标签的 muted 属性的添加方式为：videoEl.muted = true。
+
             if (!el.component &&
                 name === 'muted' &&
                 platformMustUseProp(el.tag, el.attrsMap.type, name)) {
@@ -1286,13 +1406,25 @@ function checkInFor(el: ASTElement): boolean {
     return false
 }
 
+// 接收参数指令名和指令修饰符
 function parseModifiers(name: string): Object | void {
+    // modifierRE匹配指令修饰符
+    // 假设我们的指令字符串为：'v-bind:some-prop.sync'，
+    // 则使用该字符串去匹配正则 modifierRE 最终将会得到一个数组：
+    // [".sync"]。一个指令有几个修饰符，
+    // 则匹配的结果数组中就包含几个元素。如果匹配失败则会得到 null。
     const match = name.match(modifierRE)
     if (match) {
         const ret = {}
+        // 循环match 把match中的每一项都作为ret的属性 由于match中的每一项匹配的是修饰符 因此要用m.slice(1)去掉.
         match.forEach(m => { ret[m.slice(1)] = true })
+        // 最后返回 ret
+        // {
+        //     sync:true
+        // }
         return ret
     }
+    // 如果字符串中不包含修饰符则返回undefined
 }
 
 function makeAttrsMap(attrs: Array < Object > ): Object {
@@ -1367,6 +1499,10 @@ function guardIESVGBug(attrs) {
 function checkForAliasModel(el, value) {
     let _el = el
     while (_el) {
+        // 如果使用了model指令的当前元素的 上一级直到根标签 使用了for循环 且model的属性值对应 for循环 in前()的第一个变量
+        // <div v-for="obj of list">
+        // <input v-model="obj.item" />
+        // </div>这里的list必须为对象数组 否则v-model指令无效
         if (_el.for && _el.alias === value) {
             warn(
                 `<${el.tag} v-model="${value}">: ` +

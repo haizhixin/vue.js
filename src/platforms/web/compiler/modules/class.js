@@ -7,6 +7,7 @@ import {
   baseWarn
 } from 'compiler/helpers'
 
+// 中置处理
 function transformNode (el: ASTElement, options: CompilerOptions) {
   const warn = options.warn || baseWarn
   const staticClass = getAndRemoveAttr(el, 'class')
@@ -22,11 +23,17 @@ function transformNode (el: ASTElement, options: CompilerOptions) {
       )
     }
   }
+  // 非绑定的class属性值保存在元素描述对象的staticClass属性中
   if (staticClass) {
+    // 例如<div class="a b c"></div>
+    // el.staticClass = JSON.stringify('a b c')
     el.staticClass = JSON.stringify(staticClass)
   }
   const classBinding = getBindingAttr(el, 'class', false /* getStatic */)
+  // 绑定的class属性值保存在元素描述对象的classBinding属性中
   if (classBinding) {
+    // 例如<div :class="{ 'active': isActive }"></div>
+    // el.classBinding = "{ 'active': isActive }"
     el.classBinding = classBinding
   }
 }
