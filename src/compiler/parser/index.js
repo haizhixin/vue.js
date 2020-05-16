@@ -1163,8 +1163,11 @@ function processAttrs(el) {
                         `The value for a v-bind expression cannot be empty. Found in "v-bind:${name}"`
                     )
                 }
+                // 如果由修饰符 v-bind: 为开发者提供了三个修饰符 prop camel sync
                 if (modifiers) {
+                    // 如果使用了prop 该对象将被作为原生DOM对象属性
                     if (modifiers.prop && !isDynamic) {
+                        //驼峰化属性名
                         name = camelize(name)
                         if (name === 'innerHtml') name = 'innerHTML'
                     }
