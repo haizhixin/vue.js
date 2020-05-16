@@ -469,13 +469,16 @@ export function parse(
         // 当解析器遇到文本节点时 会执行如下钩子函数
         chars(text: string, start: number, end: number) {
             //当前节点的父节点不存在
-            if (!currentParent) {
+            if (!currentParent) { //currentParent变量始终保存的是当前解析节点的父节点
                 if (process.env.NODE_ENV !== 'production') {
+                    // 当整个模板的内容和文本节点的内容完全一致
                     if (text === template) {
+                        // 打印警告信息提示模板不能只是文本
                         warnOnce(
                             'Component template requires a root element, rather than just text.', { start }
                         )
                     } else if ((text = text.trim())) {
+                        //根元素外的文本将会忽略
                         warnOnce(
                             `text "${text}" outside root element will be ignored.`, { start }
                         )
@@ -485,16 +488,27 @@ export function parse(
             }
             // IE textarea placeholder bug
             /* istanbul ignore if */
+            // 处理IE浏览器的bug
+            //  <div id="box">
+            //   <textarea placeholder="some placeholder..."></textarea>
+            // </div>   当textarea 标签没有内容且有placeholder属性 会渲染成如下
+            // '<textarea placeholder="some placeholder...">some placeholder...</textarea>'
             if (isIE &&
                 currentParent.tag === 'textarea' &&
                 currentParent.attrsMap.placeholder === text
             ) {
+                // 因为再IE下只用textare标签内容为空时才会出现 即text不存在 所有直接返回不做任何处理
                 return
             }
             const children = currentParent.children
             if (inPre || text.trim()) {
+                // 如果文本节点不是空白符 无论是否在pre标签内 只要在文本标签就不进行解码 否则解码
+                // 不是空白文本且存在于文本标签中不需要解码
+                // isTextTag是否时文本节点 style script 否则进行解码
+
                 text = isTextTag(currentParent) ? text : decodeHTMLCached(text)
             } else if (!children.length) {
+                // 删除开始标签后的空白字符
                 // remove the whitespace-only node right after an opening tag
                 text = ''
             } else if (whitespaceOption) {
@@ -508,6 +522,7 @@ export function parse(
             } else {
                 text = preserveWhitespace ? ' ' : ''
             }
+            // 如果text为空字符串 不进行创建文本节点
             if (text) {
                 if (!inPre && whitespaceOption === 'condense') {
                     // condense consecutive whitespaces into single space
@@ -515,6 +530,9 @@ export function parse(
                 }
                 let res
                 let child: ? ASTNode
+
+                // 不在pre标签内 text不是空格字符
+                // parseText()解析成功说明text包含字面量表达式
                 if (!inVPre && text !== ' ' && (res = parseText(text, delimiters))) {
                     child = {
                         type: 2,
@@ -536,6 +554,14 @@ export function parse(
                     children.push(child)
                 }
             }
+
+            // 结论：
+            // 1、 如果文本节点存在于 v - pre 标签中， 则会被作为普通文本节点对象
+            // 2、 < pre > 标签内的空白会被保留
+            // 3、 preserveWhitespace 只会保留那些不在开始标签之后的空格(说空白也没问题)
+            // 4、 普通文本节点的元素描述对象的类型为 3， 即 type = 3
+            // 5、 包含字面量表达式的文本节点不会被作为普通的文本节点对待， 而是会使用 parseText 函数解析它们， 并创建一个类型为 2， 即 type = 2 的元素描述对象
+
         },
         // 注释节点钩子函数
         comment(text: string, start, end) {
