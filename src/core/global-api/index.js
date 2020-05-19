@@ -18,12 +18,14 @@ import {
   defineReactive
 } from '../util/index'
 
+// 主要作用为Vue添加全局API 也就是静态属性和静态方法
 export function initGlobalAPI (Vue: GlobalAPI) {
   // config
   const configDef = {}
   configDef.get = () => config
   if (process.env.NODE_ENV !== 'production') {
     configDef.set = () => {
+      // 不要替换Vue.config对象，而是设置各个字段。
       warn(
         'Do not replace the Vue.config object, set individual fields instead.'
       )
@@ -63,10 +65,25 @@ export function initGlobalAPI (Vue: GlobalAPI) {
   Vue.options._base = Vue
 
  {/* 把vue属性上的组件和内建的keepAlive组件合并在一起 */}
+ {/* extend(to,from)将from对象混合到to上 */}
   extend(Vue.options.components, builtInComponents)
+
+
+
+  {/* 
+  经以上处理完后的Vue
+  Vue.options = {
+	components: {
+		KeepAlive
+	},
+	directives: Object.create(null),
+	filters: Object.create(null),
+	_base: Vue
+} */}
 
   initUse(Vue)
   initMixin(Vue)
   initExtend(Vue)
+ 
   initAssetRegisters(Vue)
 }
