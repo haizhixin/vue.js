@@ -57,6 +57,7 @@ export function toRawType(value: any): string {
  * for plain JavaScript objects.
  */
 // 判断是否是一个普通的javascript对象
+// 借用Object.prototype上的toString方法 判断变量是否是一个纯对象
 export function isPlainObject(obj: any): boolean {
     return _toString.call(obj) === '[object Object]'
 }
@@ -122,6 +123,7 @@ export function makeMap(
 /**
  * Check if a tag is a built-in tag.
  */
+// 检测所注册的组件是否是内置的标签
 export const isBuiltInTag = makeMap('slot,component', true)
 
 /**
@@ -172,10 +174,12 @@ export function cached < F: Function > (fn: F): F {
 // reolace 第一个参数是模式匹配正则  第二个参数是回调函数
 // 回调函数的第一个参数是 匹配到的结果 回调函数对每一个匹配到的结果进行回调操作
 // 回调函数接下来的参数是 匹配该模式中的某个圆括号子表达式的字符串 参数有一个或者多个
-// 倒数第二个参数是匹配结果在字符串中的位置 
+// 倒数第二个参数是匹配结果在字符串中的位置
 // 最后一个参数 是原字符串
 // 执行全局匹配（查找所有匹配而非在找到第一个匹配后停止）
 const camelizeRE = /-(\w)/g //查找-后紧挨着的第一个字符
+//连字符转驼峰
+// aa-bb转化为 aaBB aa-转化为aa
 export const camelize = cached((str: string): string => {
     return str.replace(camelizeRE, (_, c) => c ? c.toUpperCase() : '')
 })
