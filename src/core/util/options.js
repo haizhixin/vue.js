@@ -36,6 +36,7 @@ const strats = config.optionMergeStrategies
  */
 if (process.env.NODE_ENV !== 'production') {
     strats.el = strats.propsData = function(parent, child, vm, key) {
+        // 如果策略函数中拿不到 vm 参数，那么处理的就是子组件的选项，
         if (!vm) {
             warn(
                 `option "${key}" can only be used during instance ` +
@@ -90,7 +91,8 @@ export function mergeDataOrFn(
     childVal: any,
     vm ? : Component
 ): ? Function {
-    if (!vm) {
+    if (!vm) { // 没有vm处理子组件选项
+
         // 在Vue.extend合并中,父子组件的data都应该是个函数
         // in a Vue.extend merge, both should be functions
         if (!childVal) {
