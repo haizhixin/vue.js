@@ -180,12 +180,9 @@ function mergeHook(
         parentVal ?
         parentVal.concat(childVal) :
         Array.isArray(childVal) ?
-        childVal :
-        [childVal] :
-        parentVal
+        childVal : [childVal] : parentVal
     return res ?
-        dedupeHooks(res) :
-        res
+        dedupeHooks(res) : res
 }
 
 // 数组去重
@@ -359,9 +356,27 @@ function normalizeProps(options: Object, vm: ? Component) {
         for (const key in props) {
             val = props[key]
             name = camelize(key)
+
+            // props: {
+            //   someData1: Number,
+            //   someData2: {
+            //     type: String,
+            //     default: ''
+            //   }
+            // } 将被规范化为：
+
+            // props: {
+            //   someData1: {
+            //     type: Number
+            //   },
+            //   someData2: {
+            //     type: String,
+            //     default: ''
+            //   }
+            // }
+
             res[name] = isPlainObject(val) ?
-                val :
-                { type: val }
+                val : { type: val }
         }
     } else if (process.env.NODE_ENV !== 'production') {
         warn(
@@ -388,8 +403,7 @@ function normalizeInject(options: Object, vm: ? Component) {
         for (const key in inject) {
             const val = inject[key]
             normalized[key] = isPlainObject(val) ?
-                extend({ from: key }, val) :
-                { from: val }
+                extend({ from: key }, val) : { from: val }
         }
     } else if (process.env.NODE_ENV !== 'production') {
         warn(
@@ -403,7 +417,30 @@ function normalizeInject(options: Object, vm: ? Component) {
 /**
  * Normalize raw function directives into object format.
  */
+// 规范化directives directives选项用来注册局部指令
 function normalizeDirectives(options: Object) {
+
+    // <div id="app" v-test1 v-test2>{{test}}</div>
+
+    // var vm = new Vue({
+    //   el: '#app',
+    //   data: {
+    //     test: 1
+    //   },
+    //   // 注册两个局部指令
+    //   directives: {
+    //     test1: {
+    //       bind: function () {
+    //         console.log('v-test1')
+    //       }
+    //     },
+    //     test2: function () {
+    //       console.log('v-test2')
+    //     }
+    //   }
+    // })
+
+
     const dirs = options.directives
     if (dirs) {
         for (const key in dirs) {
@@ -441,6 +478,7 @@ export function mergeOptions(
         checkComponents(child)
     }
 
+    // child除了普通的选项对象外还有可能是一个函数
     if (typeof child === 'function') {
         child = child.options
     }

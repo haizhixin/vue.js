@@ -48,6 +48,8 @@ export function isObject(obj: mixed): boolean % checks {
 // 借用原生的toString方法
 const _toString = Object.prototype.toString
 
+//获取一个数据真实的数据类型
+// [object RegExp] 取得时 RegExp
 export function toRawType(value: any): string {
     return _toString.call(value).slice(8, -1)
 }
