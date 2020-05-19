@@ -28,9 +28,26 @@ Vue.config.isReservedAttr = isReservedAttr
 Vue.config.getTagNamespace = getTagNamespace
 Vue.config.isUnknownElement = isUnknownElement
 
+// 安装web平台运行时的指令和组件
 // install platform runtime directives & components
 extend(Vue.options.directives, platformDirectives)
 extend(Vue.options.components, platformComponents)
+
+// 经过以上处理后 components组件变成了这样
+// Vue.options = {
+// 	components: {
+// 		KeepAlive,
+// 		Transition,
+// 		TransitionGroup
+// 	},
+// 	directives: {
+// 		model,
+// 		show
+// 	},
+// 	filters: Object.create(null),
+// 	_base: Vue
+// }
+
 
 // install platform patch function
 Vue.prototype.__patch__ = inBrowser ? patch : noop

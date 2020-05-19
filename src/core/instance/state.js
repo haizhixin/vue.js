@@ -331,6 +331,7 @@ export function stateMixin (Vue: Class<Component>) {
   dataDef.get = function () { return this._data }
   const propsDef = {}
   propsDef.get = function () { return this._props }
+  // 设置$data和$props为只读属性
   if (process.env.NODE_ENV !== 'production') {
     dataDef.set = function () {
       warn(
