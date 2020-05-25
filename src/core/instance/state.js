@@ -143,6 +143,10 @@ function initData (vm: Component) {
         `Use prop default value instead.`,
         vm
       )
+
+     // props优先级大于methods优先级大于data优先级  如果key在props中定义了就不能在data和 methods中进行定义
+     // 如果在data中定义了就不能在methods中再定义了
+    // 判断key是否是以$ 或_开头 因为vue自身的属性都是以 $ _开头 如果不是返回false执行如下方法
     } else if (!isReserved(key)) {
       proxy(vm, `_data`, key)
     }
@@ -152,6 +156,7 @@ function initData (vm: Component) {
   observe(data, true /* asRootData */)
 }
 
+// getData通过调用data选项从而获取数据对象
 export function getData (data: Function, vm: Component): any {
   // #7573 disable dep collection when invoking data getters
   pushTarget()

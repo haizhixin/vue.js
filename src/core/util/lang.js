@@ -10,8 +10,11 @@ export const unicodeRegExp = /a-zA-Z\u00B7\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u037
 /**
  * Check if a string starts with $ or _
  */
+// 判断字符串中第一个字符是否是$ 或者_来决定是否是保留的
 export function isReserved (str: string): boolean {
+  // 获取字符串中第一个字符的Unicode
   const c = (str + '').charCodeAt(0)
+  // $对应的unicode为35转化为16进制 为0x24 _对应的unicode码为95 转化为16进制就是0x5F
   return c === 0x24 || c === 0x5F
 }
 

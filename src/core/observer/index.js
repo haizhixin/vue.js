@@ -113,6 +113,7 @@ function copyAugment(target: Object, src: Object, keys: Array < string > ) {
  * returns the new observer if successfully observed,
  * or the existing observer if the value already has one.
  */
+// 第一个参数需要监测的数据  第二个参数代表被观测的数据是否是根级数据
 export function observe(value: any, asRootData: ? boolean): Observer | void {
     // 如果不是对象 直接返回 不包括null
     if (!isObject(value) || value instanceof VNode) {
@@ -123,11 +124,11 @@ export function observe(value: any, asRootData: ? boolean): Observer | void {
     if (hasOwn(value, '__ob__') && value.__ob__ instanceof Observer) {
         ob = value.__ob__
     } else if (
-        shouldObserve &&
-        !isServerRendering() &&
-        (Array.isArray(value) || isPlainObject(value)) &&
-        Object.isExtensible(value) &&
-        !value._isVue
+        shouldObserve && //一个开关是否需要被观测
+        !isServerRendering() && // 非服务端渲染才进行观测
+        (Array.isArray(value) || isPlainObject(value)) && // 数组或纯对象才进行观测
+        Object.isExtensible(value) && // 必须为可扩展的对象 非可扩展对象包含Object.preventExtensions()、Object.freeze() 以及 Object.seal()
+        !value._isVue //我们知道 Vue 实例对象拥有 _isVue 属性，所以这个条件用来避免 Vue 实例对象被观测。
     ) {
         // 返回观察者实例
         ob = new Observer(value)

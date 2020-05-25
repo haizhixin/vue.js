@@ -54,7 +54,8 @@ export function initMixin(Vue: Class < Component > ) {
         }
         // expose real self
         vm._self = vm
-
+        
+        //先合并再进行初始化
         // 先初始化事件和属性 然后触发生命周期钩子
         initLifecycle(vm)
         initEvents(vm)
