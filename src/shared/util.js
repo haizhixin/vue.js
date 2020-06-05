@@ -37,7 +37,7 @@ export function isPrimitive(value: any): boolean % checks {
  * Quick object check - this is primarily used to tell
  * Objects from primitive values when we know the value
  * is a JSON-compliant type.
- */ //判断是否是一个纯对象
+ */ //判断是否是一个对象
 export function isObject(obj: mixed): boolean % checks {
     return obj !== null && typeof obj === 'object'
 }
@@ -71,6 +71,7 @@ export function isRegExp(v: any): boolean {
 /**
  * Check if val is a valid array index.
  */
+// 校验key是否是有效的数组索引
 export function isValidArrayIndex(val: any): boolean {
     const n = parseFloat(String(val))
     return n >= 0 && Math.floor(n) === n && isFinite(val)
