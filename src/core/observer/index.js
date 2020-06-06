@@ -47,6 +47,7 @@ export class Observer {
         this.dep = new Dep()
         this.vmCount = 0
         // 在value上新增一个不可枚举的属性_ob_ 这个属性的值就是当前Observer的实例
+        // 只有对象为数组才有_ob_属性
         def(value, '__ob__', this)
         // 区分对象和数组 做不同的响应化处理
 
@@ -56,6 +57,10 @@ export class Observer {
             } else { // 如果浏览器不支持_proto_ 直接把arrayMethods上的方法覆盖到 Value上 value是个对象
                 copyAugment(value, arrayMethods, arrayKeys)
             }
+
+            // 总之无论是 protoAugment 函数还是 copyAugment 函数，
+            // 他们的目的只有一个：把数组实例与代理原型或与代理原型中定义的函数联系起来，从而拦截数组变异方法。
+            // 为了使嵌套的数组或对象同样是响应式数据，我们需要递归的观测那些类型为数组或对象的数组元素，而这就是 observeArray 方法的作用
             this.observeArray(value)
         } else { // 如果是对象 walk行走
             this.walk(value)
@@ -159,9 +164,17 @@ export function defineReactive(
     // cater for pre-defined getter/setters
     const getter = property && property.get
     const setter = property && property.set
+
+
     if ((!getter || setter) && arguments.length === 2) {
         val = obj[key]
     }
+    // 第一：由于当属性存在原本的 getter 时在深度观测之前不会取值，所以在深度观测语句执行之前取不到属性值从而无法深度观测。
+    // 第二：之所以在深度观测之前不取值是因为属性原本的 getter 由用户定义，用户可能在 getter 中做任何意想不到的事情，
+    // 这么做是出于避免引发不可预见行为的考虑。
+
+
+    // childOb返回观察者实例
 
     let childOb = !shallow && observe(val)
     Object.defineProperty(obj, key, {
@@ -173,6 +186,9 @@ export function defineReactive(
                 // dep对象就是属性的getter/setter通过闭包引用的收集依赖的"框"
                 dep.depend()
                 if (childOb) {
+                    // 所以childOb ===  data上的__ob__
+                    // 所以childOb.dep === data.__ob__.dep。也就是说 childOb.dep.depend()
+
                     childOb.dep.depend()
                     if (Array.isArray(value)) {
                         dependArray(value)
@@ -199,6 +215,7 @@ export function defineReactive(
             } else {
                 val = newVal
             }
+            // 对新赋值进行深度观测
             childOb = !shallow && observe(newVal)
             dep.notify()
         }
