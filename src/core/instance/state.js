@@ -182,6 +182,21 @@ function initComputed (vm: Component, computed: Object) {
   for (const key in computed) {
     // 用来保存用户设置的计算属性定义 
     const userDef = computed[key]
+
+    // computed: {
+    //   someComputedProp () {
+    //     return this.a + this.b
+    //   }
+    // }
+    // // 等价于
+    // computed: {
+    //   someComputedProp: {
+    //     get () {
+    //       return this.a + this.b
+    //     }
+    //   }
+    // }
+
     // 如果用户传入的计算属性既不是函数 也不对象或者说是对象但没有提供get方法 报错警告
     const getter = typeof userDef === 'function' ? userDef : userDef.get
     if (process.env.NODE_ENV !== 'production' && getter == null) {
@@ -193,6 +208,7 @@ function initComputed (vm: Component, computed: Object) {
 
     if (!isSSR) {
       // create internal watcher for the computed property.
+      // 创建了一个观察者实例对象，我们称之为 计算属性的观察者
       watchers[key] = new Watcher(
         vm,
         getter || noop,
@@ -204,6 +220,7 @@ function initComputed (vm: Component, computed: Object) {
     // component-defined computed properties are already defined on the
     // component prototype. We only need to define computed properties defined
     // at instantiation here.
+    // 这段代码首先检查计算属性的名字是否已经存在于组件实例对象中，我们知道在初始化计算属性之前已经初始化了 props、methods 和 data 选项，并且这些选项数据都会定义在组件实例对象上，由于计算属性也需要定义在组件实例对象上，所以需要使用计算属性的名字检查组件实例对象上是否已经有了同名的定义，如果该名字已经定义在组件实例对象上，那么有可能是 data 数据或 props 数据或 methods 数据之一，对于 data 和 props 来讲他们是不允许被 computed 选项中的同名属性覆盖的，所以在非生产环境中还要检查计算属性中是否存在与 data 和 props 选项同名的属性，如果有则会打印警告信息。如果没有则调用 defineComputed 定义计算属性。
     if (!(key in vm)) {
       defineComputed(vm, key, userDef)
     } else if (process.env.NODE_ENV !== 'production') {
@@ -237,6 +254,31 @@ export function defineComputed (
       : noop
     sharedPropertyDefinition.set = userDef.set || noop
   }
+
+  // 总之，无论 userDef 是函数还是对象，在非服务端渲染的情况下，配置对象 sharedPropertyDefinition 最终将变成如下这样：
+
+  // sharedPropertyDefinition = {
+  //   enumerable: true,
+  //   configurable: true,
+  //   get: createComputedGetter(key),
+  //   set: userDef.set // 或 noop
+  // }
+
+  // 也就是说计算属性真正的 get 拦截器函数就是 computedGetter 函数，如下：
+
+// sharedPropertyDefinition = {
+//   enumerable: true,
+//   configurable: true,
+//   get: function computedGetter () {
+//     const watcher = this._computedWatchers && this._computedWatchers[key]
+//     if (watcher) {
+//       watcher.depend()
+//       return watcher.evaluate()
+//     }
+//   },
+//   set: noop // 没有指定 userDef.set 所以是空函数
+// }
+
   if (process.env.NODE_ENV !== 'production' &&
       sharedPropertyDefinition.set === noop) {
     sharedPropertyDefinition.set = function () {
@@ -255,6 +297,7 @@ function createComputedGetter (key) {
     if (watcher) {
       // watcher.dirty标识计算属性的返回值是否有变化
       if (watcher.dirty) {
+        // 对计算属性进行求值
         watcher.evaluate()
       }
       if (Dep.target) {
@@ -299,9 +342,21 @@ function initMethods (vm: Component, methods: Object) {
   }
 }
 
+// 用了 watch 选项
 function initWatch (vm: Component, watch: Object) {
   for (const key in watch) {
     const handler = watch[key]
+
+    // watch: {
+    //   name: [
+    //     function () {
+    //       console.log('name 改变了1')
+    //     },
+    //     function () {
+    //       console.log('name 改变了2')
+    //     }
+    //   ]
+    // }
     if (Array.isArray(handler)) {
       for (let i = 0; i < handler.length; i++) {
         createWatcher(vm, key, handler[i])
@@ -318,10 +373,26 @@ function createWatcher (
   handler: any,
   options?: Object
 ) {
+
+  // watch: {
+  //   c: {
+  //     handler: function (val, oldVal) { /* ... */ },
+  //     deep: true
+  //   }
+  // }
+
   if (isPlainObject(handler)) {
     options = handler
     handler = handler.handler
   }
+  // watch: {
+  //   name: 'handleNameChange'
+  // },
+  // methods: {
+  //   handleNameChange () {
+  //     console.log('name change')
+  //   }
+  // }
   if (typeof handler === 'string') {
     handler = vm[handler]
   }
@@ -361,12 +432,15 @@ export function stateMixin (Vue: Class<Component>) {
     options?: Object
   ): Function {
     const vm: Component = this
-    if (isPlainObject(cb)) {
+    // $watch第二个参数可以是一个函数或者对象
+    if (isPlainObject(cb)) {// 如果是对象
       return createWatcher(vm, expOrFn, cb, options)
     }
     options = options || {}
     options.user = true
     const watcher = new Watcher(vm, expOrFn, cb, options)
+    // 我们知道 immediate 选项用来在属性或函数被侦听后立即执行回调，如上代码就是其实现原理，
+    // 如果发现 options.immediate 选项为真，那么会执行回调函数，不过此时回调函数的参数只有新值没有旧值。同时取值的方式是通过前面创建的观察者实例对象的 watcher.value 属性。我们知道观察者实例对象的 value 属性，保存着被观察属性的值。
     if (options.immediate) {
       try {
         cb.call(vm, watcher.value)
@@ -374,7 +448,9 @@ export function stateMixin (Vue: Class<Component>) {
         handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
       }
     }
+
     return function unwatchFn () {
+      // 解除观察者与属性之间的关系
       watcher.teardown()
     }
   }

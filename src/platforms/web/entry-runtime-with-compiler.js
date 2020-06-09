@@ -17,6 +17,10 @@ const idToTemplate = cached(id => {
 // 保存Vue上的$mount
 const mount = Vue.prototype.$mount
 // 定义Vue上的$mount方法 该方法需要两个可选的形参
+
+// 总结，实际上完整版 Vue 的 $mount 函数要做的核心事情就是编译模板(template)字符串为渲染函数，
+// 并将渲染函数赋值给 vm.$options.render 选项，这个选项将会在真正挂载组件的 mountComponent 函数中。
+
 Vue.prototype.$mount = function (
   el?: string | Element,//字符串或者dom元素
   hydrating?: boolean
@@ -111,6 +115,7 @@ function getOuterHTML (el: Element): string {
   }
 }
 
+//Vue.compile 函数是 Vue 暴露给开发者的工具函数，他能够将字符串编译为渲染函数。
 Vue.compile = compileToFunctions
 
 export default Vue

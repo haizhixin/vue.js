@@ -43,16 +43,19 @@ export default class Watcher {
   value: any;
 
   constructor (
-    vm: Component,
-    expOrFn: string | Function,
-    cb: Function,
-    options?: ?Object,
-    isRenderWatcher?: boolean
+    vm: Component,//组件实例对象
+    expOrFn: string | Function,// 要观察的表达式
+    cb: Function,//当被观察的表达式的值变化时的回调函数
+    options?: ?Object,// 一些传递给当前观察者对象的选项 options
+    isRenderWatcher?: boolean//用来标识该观察者实例是否是渲染函数的观察者。
   ) {
     this.vm = vm
     if (isRenderWatcher) {
+      // 组件实例的_watcher 属性的值引用着该组件的渲染函数观察者
       vm._watcher = this
     }
+    // 属于该组件实例的观察者都会被添加到该组件实例对象的 vm._watchers 数组中，
+    // 包括渲染函数的观察者和非渲染函数的观察者。
     vm._watchers.push(this)
     // options
     if (options) {
@@ -76,6 +79,9 @@ export default class Watcher {
       ? expOrFn.toString()
       : ''
     // parse expression for getter
+    // 观察者实例对象的 this.getter 函数终将会是一个函数
+    // 如果不是函数，如上高亮代码所示。此时只有一种可能，那就是 parsePath 
+    // 函数在解析表达式的时候失败了，那么这时在非生产环境会打印警告信息，
     if (typeof expOrFn === 'function') {
       this.getter = expOrFn
     } else {
@@ -139,6 +145,8 @@ export default class Watcher {
   /**
    * Clean up for dependency collection.
    */
+  // 这个方法的作用正如我们前面所说的那样，每次求值完毕后都会使用 depIds 属性和 deps 属性保存 newDepIds 属性
+  // 和 newDeps 属性的值，然后再清空 newDepIds 属性和 newDeps 属性的值，
   cleanupDeps () {
     let i = this.deps.length
     while (i--) {

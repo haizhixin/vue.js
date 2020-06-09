@@ -150,7 +150,9 @@ export function defineReactive(
     shallow ? : boolean
 ) {
     const dep = new Dep()
-
+    //判断该字段是否是可配置的，如果不可配置 那么直接 return
+    // 这么做也是合理的，因为一个不可配置的属性是不能使用也没必要使用 
+    // Object.defineProperty 改变其属性定义的。
     const property = Object.getOwnPropertyDescriptor(obj, key)
     if (property && property.configurable === false) {
         return
@@ -162,6 +164,20 @@ export function defineReactive(
     if ((!getter || setter) && arguments.length === 2) {
         val = obj[key]
     }
+
+    // const data = {
+    //     // 属性 a 通过 setter/getter 通过闭包引用着 dep 和 childOb
+    //     a: {
+    //       // 属性 b 通过 setter/getter 通过闭包引用着 dep 和 childOb
+    //       b: 1
+    //       __ob__: {a, dep, vmCount}
+    //     }
+    //     __ob__: {data, dep, vmCount}
+    //   }
+
+    //   需要注意的是，属性 a 闭包引用的 childOb 实际上就是 data.a.__ob__。而属性 b 闭包引用的 childOb 是 undefined，因为属性 b 是基本类型值，并不是对象也不是数组。
+      
+
 
     let childOb = !shallow && observe(val)
     Object.defineProperty(obj, key, {
@@ -277,6 +293,17 @@ export function del(target: Array < any > | Object, key: any) {
  * Collect dependencies on array elements when the array is touched, since
  * we cannot intercept array element access like property getters.
  */
+
+// {
+//     arr: [
+//       { a: 1, __ob__ /* 我们将该 __ob__ 称为 ob2 */ },
+//       __ob__ /* 我们将该 __ob__ 称为 ob1 */
+//     ]
+//   }
+// ins.$set(ins.$data.arr[0], 'b', 2)
+//触发不了依赖 靠dependArray解决
+
+// 如果对象的属性是个数组 而数组里的元素是对象或者 数组依然要收集依赖
 function dependArray(value: Array < any > ) {
     for (let e, i = 0, l = value.length; i < l; i++) {
         e = value[i]
