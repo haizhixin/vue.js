@@ -84,6 +84,31 @@ function initProps(vm: Component, propsOptions: Object) {
     }
     for (const key in propsOptions) {
         keys.push(key)
+
+        // {
+        //   name: 'someComp',
+        //   props: {
+        //     prop1: String
+        //   }
+        // }
+        // 并像如下代码这样使用：
+
+        // <some-comp prop1="str" />
+        // 那么 validateProp 函数接收的四个参数将会是：
+
+        // key = 'prop1'
+        // // props 选项参数
+        // propOptions = {
+        //   prop1: {
+        //     type: String
+        //   }
+        // }
+        // // props 数据
+        // propsData = {
+        //   prop1: 'str'
+        // }
+        // // 组件实例对象
+        // vm = vm
         const value = validateProp(key, propsOptions, propsData, vm)
         /* istanbul ignore else */
         if (process.env.NODE_ENV !== 'production') {
@@ -272,6 +297,9 @@ function createComputedGetter(key) {
             // watcher.dirty标识计算属性的返回值是否有变化
             if (watcher.dirty) {
                 watcher.evaluate()
+
+                // this.get()
+                // dirty ==false
             }
             if (Dep.target) {
                 watcher.depend()
