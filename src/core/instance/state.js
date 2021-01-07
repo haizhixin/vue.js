@@ -292,14 +292,14 @@ export function defineComputed(
 
 function createComputedGetter(key) {
     return function computedGetter() {
+        // 每一个计算属性的watcher
         const watcher = this._computedWatchers && this._computedWatchers[key]
         if (watcher) {
             // watcher.dirty标识计算属性的返回值是否有变化
+            // 当 dirty 为 true 时，读取 computed 会重新计算
+            // 当 dirty 为 false 时，读取 computed 会使用缓存
             if (watcher.dirty) {
                 watcher.evaluate()
-
-                // this.get()
-                // dirty ==false
             }
             if (Dep.target) {
                 watcher.depend()
