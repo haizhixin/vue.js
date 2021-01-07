@@ -84,6 +84,31 @@ function initProps(vm: Component, propsOptions: Object) {
     }
     for (const key in propsOptions) {
         keys.push(key)
+
+        // {
+        //   name: 'someComp',
+        //   props: {
+        //     prop1: String
+        //   }
+        // }
+        // 并像如下代码这样使用：
+
+        // <some-comp prop1="str" />
+        // 那么 validateProp 函数接收的四个参数将会是：
+
+        // key = 'prop1'
+        // // props 选项参数
+        // propOptions = {
+        //   prop1: {
+        //     type: String
+        //   }
+        // }
+        // // props 数据
+        // propsData = {
+        //   prop1: 'str'
+        // }
+        // // 组件实例对象
+        // vm = vm
         const value = validateProp(key, propsOptions, propsData, vm)
         /* istanbul ignore else */
         if (process.env.NODE_ENV !== 'production') {
@@ -195,7 +220,6 @@ function initComputed(vm: Component, computed: Object) {
     // 判断当前运行环境是否是服务端渲染
     const isSSR = isServerRendering()
 
-<<<<<<< HEAD
   for (const key in computed) {
     // 用来保存用户设置的计算属性定义 
     const userDef = computed[key]
@@ -246,42 +270,6 @@ function initComputed(vm: Component, computed: Object) {
       } else if (vm.$options.props && key in vm.$options.props) {
         warn(`The computed property "${key}" is already defined as a prop.`, vm)
       }
-=======
-    for (const key in computed) {
-        // 用来保存用户设置的计算属性定义
-        const userDef = computed[key]
-        // 如果用户传入的计算属性既不是函数 也不对象或者说是对象但没有提供get方法 报错警告
-        const getter = typeof userDef === 'function' ? userDef : userDef.get
-        if (process.env.NODE_ENV !== 'production' && getter == null) {
-            warn(
-                `Getter is missing for computed property "${key}".`,
-                vm
-            )
-        }
-
-        if (!isSSR) {
-            // create internal watcher for the computed property.
-            watchers[key] = new Watcher(
-                vm,
-                getter || noop,
-                noop,
-                computedWatcherOptions
-            )
-        }
-
-        // component-defined computed properties are already defined on the
-        // component prototype. We only need to define computed properties defined
-        // at instantiation here.
-        if (!(key in vm)) {
-            defineComputed(vm, key, userDef)
-        } else if (process.env.NODE_ENV !== 'production') {
-            if (key in vm.$data) {
-                warn(`The computed property "${key}" is already defined in data.`, vm)
-            } else if (vm.$options.props && key in vm.$options.props) {
-                warn(`The computed property "${key}" is already defined as a prop.`, vm)
-            }
-        }
->>>>>>> b8bec84b7c0475abb2922c7f06f3ad7086064480
     }
 }
 
@@ -290,7 +278,6 @@ export function defineComputed(
     key: string,
     userDef: Object | Function
 ) {
-<<<<<<< HEAD
   // 判断computed是否有缓存 isServerRendering是否是服务端渲染
   // 只有非服务端渲染环境下才为true 也就是说只有非服务端渲染环境下计算属性才有缓存
   const shouldCache = !isServerRendering()
@@ -339,23 +326,6 @@ export function defineComputed(
         `Computed property "${key}" was assigned to but it has no setter.`,
         this
       )
-=======
-    // 判断computed是否有缓存 isServerRendering是否是服务端渲染
-    // 只有非服务端渲染环境下才为true 也就是说只有非服务端渲染环境下计算属性才有缓存
-    const shouldCache = !isServerRendering()
-    if (typeof userDef === 'function') {
-        sharedPropertyDefinition.get = shouldCache ?
-            createComputedGetter(key) :
-            createGetterInvoker(userDef)
-        sharedPropertyDefinition.set = noop
-    } else {
-        sharedPropertyDefinition.get = userDef.get ?
-            shouldCache && userDef.cache !== false ?
-            createComputedGetter(key) :
-            createGetterInvoker(userDef.get) :
-            noop
-        sharedPropertyDefinition.set = userDef.set || noop
->>>>>>> b8bec84b7c0475abb2922c7f06f3ad7086064480
     }
     if (process.env.NODE_ENV !== 'production' &&
         sharedPropertyDefinition.set === noop) {
@@ -419,7 +389,6 @@ function initMethods(vm: Component, methods: Object) {
     }
 }
 
-<<<<<<< HEAD
 // 用了 watch 选项
 function initWatch (vm: Component, watch: Object) {
   for (const key in watch) {
@@ -441,18 +410,6 @@ function initWatch (vm: Component, watch: Object) {
       }
     } else {
       createWatcher(vm, key, handler)
-=======
-function initWatch(vm: Component, watch: Object) {
-    for (const key in watch) {
-        const handler = watch[key]
-        if (Array.isArray(handler)) {
-            for (let i = 0; i < handler.length; i++) {
-                createWatcher(vm, key, handler[i])
-            }
-        } else {
-            createWatcher(vm, key, handler)
-        }
->>>>>>> b8bec84b7c0475abb2922c7f06f3ad7086064480
     }
 }
 
@@ -462,7 +419,6 @@ function createWatcher(
     handler: any,
     options ? : Object
 ) {
-<<<<<<< HEAD
 
   // watch: {
   //   c: {
@@ -487,16 +443,6 @@ function createWatcher(
     handler = vm[handler]
   }
   return vm.$watch(expOrFn, handler, options)
-=======
-    if (isPlainObject(handler)) {
-        options = handler
-        handler = handler.handler
-    }
-    if (typeof handler === 'string') {
-        handler = vm[handler]
-    }
-    return vm.$watch(expOrFn, handler, options)
->>>>>>> b8bec84b7c0475abb2922c7f06f3ad7086064480
 }
 
 export function stateMixin(Vue: Class < Component > ) {
@@ -526,7 +472,6 @@ export function stateMixin(Vue: Class < Component > ) {
     Vue.prototype.$set = set
     Vue.prototype.$delete = del
 
-<<<<<<< HEAD
   Vue.prototype.$watch = function (
     expOrFn: string | Function,
     cb: any,
@@ -553,29 +498,5 @@ export function stateMixin(Vue: Class < Component > ) {
     return function unwatchFn () {
       // 解除观察者与属性之间的关系
       watcher.teardown()
-=======
-    Vue.prototype.$watch = function(
-        expOrFn: string | Function,
-        cb: any,
-        options ? : Object
-    ): Function {
-        const vm: Component = this
-        if (isPlainObject(cb)) {
-            return createWatcher(vm, expOrFn, cb, options)
-        }
-        options = options || {}
-        options.user = true
-        const watcher = new Watcher(vm, expOrFn, cb, options)
-        if (options.immediate) {
-            try {
-                cb.call(vm, watcher.value)
-            } catch (error) {
-                handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
-            }
-        }
-        return function unwatchFn() {
-            watcher.teardown()
-        }
->>>>>>> b8bec84b7c0475abb2922c7f06f3ad7086064480
     }
 }

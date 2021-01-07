@@ -204,7 +204,6 @@ export function defineReactive(
                 if (childOb) {
                     // 所以childOb ===  data上的__ob__
                     // 所以childOb.dep === data.__ob__.dep。也就是说 childOb.dep.depend()
-
                     childOb.dep.depend()
                     if (Array.isArray(value)) {
                         dependArray(value)
