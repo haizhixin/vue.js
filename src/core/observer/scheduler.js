@@ -163,11 +163,23 @@ function callActivatedHooks (queue) {
  */
 export function queueWatcher (watcher: Watcher) {
   const id = watcher.id
+  //该 if 语句以及变量 has 的作用就是用来避免将相同的观察者重复入队的
   if (has[id] == null) {
     has[id] = true
+    // flushing 变量是一个标志，我们知道放入队列 queue 中的所有观察者将会在突变完成之后统一执行更新，
+    // 当更新开始时会将 flushing 变量的值设置为 true，
+    // 代表着此时正在执行更新，所以根据判断条件 if (!flushing) 
+    // 可知只有当队列没有执行更新时才会简单地将观察者追加到队列的尾部，
+    // 有的同学可能会问：“难道在队列执行更新的过程中还会有观察者入队的操作吗？”，
+    // 实际上是会的，典型的例子就是计算属性，比如队列执行更新时经常会执行渲染函数观察者的更新，渲染函数中很可能有计算属性的存在，
+    // 由于计算属性在实现方式上与普通响应式属性有所不同，所以当触发计算属性的 get 拦截器函数时会有观察者入队的行为，
+    // 这个时候我们需要特殊处理，也就是 else 分支的代码，如下
+    
+    // 防止队列正在执行时有观察者入队
     if (!flushing) {
       queue.push(watcher)
     } else {
+      // 当变量 flushing 为真时，说明队列正在执行更新，这时如果有观察者入队则会执行 else 分支中的代码，这段代码的作用是为了保证观察者的执行顺序，现在大家只需要知道观察者会被放入 queue 队列中即可，
       // if already flushing, splice the watcher based on its id
       // if already past its id, it will be run next immediately.
       let i = queue.length - 1
@@ -177,13 +189,20 @@ export function queueWatcher (watcher: Watcher) {
       queue.splice(i + 1, 0, watcher)
     }
     // queue the flush
+    // waiting默认为false 
     if (!waiting) {
       waiting = true
+      // 在 if 语句块内先将 waiting 的值设置为 true，
+      // 这意味着无论调用多少次 queueWatcher 函数，
+      // 该 if 语句块的代码只会执行一次
 
       if (process.env.NODE_ENV !== 'production' && !config.async) {
         flushSchedulerQueue()
         return
       }
+      // waiting 变量就保证了 nextTick 语句只会执行一次，这样 flushSchedulerQueue 函数将会在下一次事件循环开始时立即调用，
+
+      // 其中 flushSchedulerQueue 函数的作用之一就是用来将队列中的观察者统一执行更新的
       nextTick(flushSchedulerQueue)
     }
   }

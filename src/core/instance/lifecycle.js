@@ -162,7 +162,7 @@ export function lifecycleMixin (Vue: Class<Component>) {
     }
   }
 }
-
+// 把渲染函数生成的虚拟DOM渲染成真正的DOM
 export function mountComponent (
   vm: Component,
   el: ?Element,

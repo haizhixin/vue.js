@@ -109,7 +109,7 @@ export default class Watcher {
     // this.getter = Bfn;
     // this.value = undefined;
 
-    
+
 
     /**
      * Evaluate the getter, and re-collect dependencies.
@@ -178,15 +178,16 @@ export default class Watcher {
      * Will be called when a dependency changes.
      */
     update() {
-        /* istanbul ignore else */
-        if (this.lazy) {
-            this.dirty = true
-        } else if (this.sync) {
-            this.run()
-        } else {
-            queueWatcher(this)
-        }
-    }
+            /* istanbul ignore else */
+            if (this.lazy) {
+                this.dirty = true
+            } else if (this.sync) {
+                this.run()
+            } else {
+                queueWatcher(this)
+            }
+        } <<
+        << << < HEAD
 
     /**
      * Scheduler job interface.
@@ -217,6 +218,7 @@ export default class Watcher {
                 }
             }
         }
+
     }
 
     /**
