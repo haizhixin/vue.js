@@ -212,6 +212,8 @@ export function getData(data: Function, vm: Component): any {
 }
 
 const computedWatcherOptions = { lazy: true }
+// 之前的版本
+// const computedWatcherOptions = { computed: true }
 
 function initComputed(vm: Component, computed: Object) {
     // $flow-disable-line
@@ -347,7 +349,10 @@ function initComputed(vm: Component, computed: Object) {
                     // watcher.dirty标识计算属性的返回值是否有变化
                     // 当 dirty 为 true 时，读取 computed 会重新计算
                     // 当 dirty 为 false 时，读取 computed 会使用缓存
+                    //初始化时 this.dirty = this.lazy = true
                     if (watcher.dirty) {
+                        // 进行求值
+                        // 求值之后dirty = false
                         watcher.evaluate()
                     }
                     if (Dep.target) {
