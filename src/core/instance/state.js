@@ -319,6 +319,7 @@ function initComputed(vm: Component, computed: Object) {
         //   set: noop // 没有指定 userDef.set 所以是空函数
         // }
 
+
         if (process.env.NODE_ENV !== 'production' &&
             sharedPropertyDefinition.set === noop) {
             sharedPropertyDefinition.set = function() {
@@ -327,179 +328,172 @@ function initComputed(vm: Component, computed: Object) {
                     this
                 )
             }
-            if (process.env.NODE_ENV !== 'production' &&
-                sharedPropertyDefinition.set === noop) {
-                sharedPropertyDefinition.set = function() {
+        }
+        Object.defineProperty(target, key, sharedPropertyDefinition)
+    }
+
+    function createComputedGetter(key) {
+        return function computedGetter() {
+            // 每一个计算属性的watcher
+            const watcher = this._computedWatchers && this._computedWatchers[key]
+            if (watcher) {
+                // watcher.dirty标识计算属性的返回值是否有变化
+                // 当 dirty 为 true 时，读取 computed 会重新计算
+                // 当 dirty 为 false 时，读取 computed 会使用缓存
+                if (watcher.dirty) {
+                    // 对计算属性求值 从而触发依赖的响应式属性的get  从而把计算属性的watcher收集到 响应式属性的依赖列表中
+                    watcher.evaluate()
+                }
+                if (Dep.target) {
+                    watcher.depend()
+                }
+                return watcher.value
+            }
+        }
+    }
+
+    function createGetterInvoker(fn) {
+        return function computedGetter() {
+            return fn.call(this, this)
+        }
+    }
+
+    function initMethods(vm: Component, methods: Object) {
+        const props = vm.$options.props
+        for (const key in methods) {
+            if (process.env.NODE_ENV !== 'production') {
+                if (typeof methods[key] !== 'function') {
                     warn(
-                        `Computed property "${key}" was assigned to but it has no setter.`,
-                        this
+                        `Method "${key}" has type "${typeof methods[key]}" in the component definition. ` +
+                        `Did you reference the function correctly?`,
+                        vm
+                    )
+                }
+                if (props && hasOwn(props, key)) {
+                    warn(
+                        `Method "${key}" has already been defined as a prop.`,
+                        vm
+                    )
+                }
+                if ((key in vm) && isReserved(key)) {
+                    warn(
+                        `Method "${key}" conflicts with an existing Vue instance method. ` +
+                        `Avoid defining component methods that start with _ or $.`
                     )
                 }
             }
-            Object.defineProperty(target, key, sharedPropertyDefinition)
+            vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
+        }
+    }
+
+    // 用了 watch 选项
+    function initWatch(vm: Component, watch: Object) {
+        for (const key in watch) {
+            const handler = watch[key]
+
+            // watch: {
+            //   name: [
+            //     function () {
+            //       console.log('name 改变了1')
+            //     },
+            //     function () {
+            //       console.log('name 改变了2')
+            //     }
+            //   ]
+            // }
+            if (Array.isArray(handler)) {
+                for (let i = 0; i < handler.length; i++) {
+                    createWatcher(vm, key, handler[i])
+                }
+            } else {
+                createWatcher(vm, key, handler)
+            }
         }
 
-        function createComputedGetter(key) {
-            return function computedGetter() {
-                // 每一个计算属性的watcher
-                const watcher = this._computedWatchers && this._computedWatchers[key]
-                if (watcher) {
-                    // watcher.dirty标识计算属性的返回值是否有变化
-                    // 当 dirty 为 true 时，读取 computed 会重新计算
-                    // 当 dirty 为 false 时，读取 computed 会使用缓存
-                    if (watcher.dirty) {
-                        watcher.evaluate()
-                    }
-                    if (Dep.target) {
-                        watcher.depend()
-                    }
-                    return watcher.value
+        function createWatcher(
+            vm: Component,
+            expOrFn: string | Function,
+            handler: any,
+            options ? : Object
+        ) {
+
+            // watch: {
+            //   c: {
+            //     handler: function (val, oldVal) { /* ... */ },
+            //     deep: true
+            //   }
+            // }
+
+            if (isPlainObject(handler)) {
+                options = handler
+                handler = handler.handler
+            }
+            // watch: {
+            //   name: 'handleNameChange'
+            // },
+            // methods: {
+            //   handleNameChange () {
+            //     console.log('name change')
+            //   }
+            // }
+            if (typeof handler === 'string') {
+                handler = vm[handler]
+            }
+            return vm.$watch(expOrFn, handler, options)
+        }
+
+        export function stateMixin(Vue: Class < Component > ) {
+            // flow somehow has problems with directly declared definition object
+            // when using Object.defineProperty, so we have to procedurally build up
+            // the object here.
+            const dataDef = {}
+            dataDef.get = function() { return this._data }
+            const propsDef = {}
+            propsDef.get = function() { return this._props }
+            // 设置$data和$props为只读属性
+            if (process.env.NODE_ENV !== 'production') {
+                dataDef.set = function() {
+                    warn(
+                        'Avoid replacing instance root $data. ' +
+                        'Use nested data properties instead.',
+                        this
+                    )
+                }
+                propsDef.set = function() {
+                    warn(`$props is readonly.`, this)
                 }
             }
-        }
+            Object.defineProperty(Vue.prototype, '$data', dataDef)
+            Object.defineProperty(Vue.prototype, '$props', propsDef)
 
-        function createGetterInvoker(fn) {
-            return function computedGetter() {
-                return fn.call(this, this)
-            }
-        }
+            Vue.prototype.$set = set
+            Vue.prototype.$delete = del
 
-        function initMethods(vm: Component, methods: Object) {
-            const props = vm.$options.props
-            for (const key in methods) {
-                if (process.env.NODE_ENV !== 'production') {
-                    if (typeof methods[key] !== 'function') {
-                        warn(
-                            `Method "${key}" has type "${typeof methods[key]}" in the component definition. ` +
-                            `Did you reference the function correctly?`,
-                            vm
-                        )
-                    }
-                    if (props && hasOwn(props, key)) {
-                        warn(
-                            `Method "${key}" has already been defined as a prop.`,
-                            vm
-                        )
-                    }
-                    if ((key in vm) && isReserved(key)) {
-                        warn(
-                            `Method "${key}" conflicts with an existing Vue instance method. ` +
-                            `Avoid defining component methods that start with _ or $.`
-                        )
-                    }
-                }
-                vm[key] = typeof methods[key] !== 'function' ? noop : bind(methods[key], vm)
-            }
-        }
-
-        // 用了 watch 选项
-        function initWatch(vm: Component, watch: Object) {
-            for (const key in watch) {
-                const handler = watch[key]
-
-                // watch: {
-                //   name: [
-                //     function () {
-                //       console.log('name 改变了1')
-                //     },
-                //     function () {
-                //       console.log('name 改变了2')
-                //     }
-                //   ]
-                // }
-                if (Array.isArray(handler)) {
-                    for (let i = 0; i < handler.length; i++) {
-                        createWatcher(vm, key, handler[i])
-                    }
-                } else {
-                    createWatcher(vm, key, handler)
-                }
-            }
-
-            function createWatcher(
-                vm: Component,
+            Vue.prototype.$watch = function(
                 expOrFn: string | Function,
-                handler: any,
+                cb: any,
                 options ? : Object
-            ) {
-
-                // watch: {
-                //   c: {
-                //     handler: function (val, oldVal) { /* ... */ },
-                //     deep: true
-                //   }
-                // }
-
-                if (isPlainObject(handler)) {
-                    options = handler
-                    handler = handler.handler
+            ): Function {
+                const vm: Component = this
+                // $watch第二个参数可以是一个函数或者对象
+                if (isPlainObject(cb)) { // 如果是对象
+                    return createWatcher(vm, expOrFn, cb, options)
                 }
-                // watch: {
-                //   name: 'handleNameChange'
-                // },
-                // methods: {
-                //   handleNameChange () {
-                //     console.log('name change')
-                //   }
-                // }
-                if (typeof handler === 'string') {
-                    handler = vm[handler]
+                options = options || {}
+                options.user = true
+                const watcher = new Watcher(vm, expOrFn, cb, options)
+                // 我们知道 immediate 选项用来在属性或函数被侦听后立即执行回调，如上代码就是其实现原理，
+                // 如果发现 options.immediate 选项为真，那么会执行回调函数，不过此时回调函数的参数只有新值没有旧值。同时取值的方式是通过前面创建的观察者实例对象的 watcher.value 属性。我们知道观察者实例对象的 value 属性，保存着被观察属性的值。
+                if (options.immediate) {
+                    try {
+                        cb.call(vm, watcher.value)
+                    } catch (error) {
+                        handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
+                    }
                 }
-                return vm.$watch(expOrFn, handler, options)
+
+                return function unwatchFn() {
+                    // 解除观察者与属性之间的关系
+                    watcher.teardown()
+                }
             }
-
-            export function stateMixin(Vue: Class < Component > ) {
-                // flow somehow has problems with directly declared definition object
-                // when using Object.defineProperty, so we have to procedurally build up
-                // the object here.
-                const dataDef = {}
-                dataDef.get = function() { return this._data }
-                const propsDef = {}
-                propsDef.get = function() { return this._props }
-                // 设置$data和$props为只读属性
-                if (process.env.NODE_ENV !== 'production') {
-                    dataDef.set = function() {
-                        warn(
-                            'Avoid replacing instance root $data. ' +
-                            'Use nested data properties instead.',
-                            this
-                        )
-                    }
-                    propsDef.set = function() {
-                        warn(`$props is readonly.`, this)
-                    }
-                }
-                Object.defineProperty(Vue.prototype, '$data', dataDef)
-                Object.defineProperty(Vue.prototype, '$props', propsDef)
-
-                Vue.prototype.$set = set
-                Vue.prototype.$delete = del
-
-                Vue.prototype.$watch = function(
-                    expOrFn: string | Function,
-                    cb: any,
-                    options ? : Object
-                ): Function {
-                    const vm: Component = this
-                    // $watch第二个参数可以是一个函数或者对象
-                    if (isPlainObject(cb)) { // 如果是对象
-                        return createWatcher(vm, expOrFn, cb, options)
-                    }
-                    options = options || {}
-                    options.user = true
-                    const watcher = new Watcher(vm, expOrFn, cb, options)
-                    // 我们知道 immediate 选项用来在属性或函数被侦听后立即执行回调，如上代码就是其实现原理，
-                    // 如果发现 options.immediate 选项为真，那么会执行回调函数，不过此时回调函数的参数只有新值没有旧值。同时取值的方式是通过前面创建的观察者实例对象的 watcher.value 属性。我们知道观察者实例对象的 value 属性，保存着被观察属性的值。
-                    if (options.immediate) {
-                        try {
-                            cb.call(vm, watcher.value)
-                        } catch (error) {
-                            handleError(error, vm, `callback for immediate watcher "${watcher.expression}"`)
-                        }
-                    }
-
-                    return function unwatchFn() {
-                        // 解除观察者与属性之间的关系
-                        watcher.teardown()
-                    }
-                }
