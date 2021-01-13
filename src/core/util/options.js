@@ -343,7 +343,7 @@ function normalizeProps(options: Object, vm: ? Component) {
     if (!props) return
     const res = {}
     let i, val, name
-    if (Array.isArray(props)) {
+    if (Array.isArray(props)) { //数组写法
         i = props.length
         while (i--) {
             val = props[i]
@@ -354,7 +354,7 @@ function normalizeProps(options: Object, vm: ? Component) {
                 warn('props must be strings when using array syntax.')
             }
         }
-    } else if (isPlainObject(props)) {
+    } else if (isPlainObject(props)) {// 普通对象写法
         for (const key in props) {
             val = props[key]
             name = camelize(key)
@@ -484,9 +484,12 @@ export function mergeOptions(
     if (typeof child === 'function') {
         child = child.options
     }
-
+    
+    // 规范化props
     normalizeProps(child, vm)
+    // 规范化inject
     normalizeInject(child, vm)
+    //  规范化指令
     normalizeDirectives(child)
 
     // Apply extends and mixins on the child options,

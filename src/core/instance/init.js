@@ -41,7 +41,7 @@ export function initMixin(Vue: Class < Component > ) {
         } else {
             // 挂载实例属性$options
             vm.$options = mergeOptions(
-                resolveConstructorOptions(vm.constructor), // vm.constructor就是Vue构造函数
+                resolveConstructorOptions(vm.constructor), // vm.constructor就是Vue构造函数 但是当时通过Vue.extend()构造的子组件 vm.constructor指向 子类构造函数
                 options || {}, // 实例化时传过来的参数
                 vm //当前实例
             )
@@ -140,8 +140,8 @@ export function resolveConstructorOptions(Ctor: Class < Component > ) {
             options.components[options.name] = Ctor
         }
     }
-}
-return options
+
+    return options
 
 // 此函数就相当于
 // vm.$options = mergeOptions(

@@ -212,6 +212,8 @@ export function getData(data: Function, vm: Component): any {
 }
 
 const computedWatcherOptions = { lazy: true }
+// 之前的版本
+// const computedWatcherOptions = { computed: true }
 
 function initComputed(vm: Component, computed: Object) {
     // $flow-disable-line

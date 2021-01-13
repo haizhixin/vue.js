@@ -146,10 +146,11 @@ export default class Watcher {
      */
     addDep(dep: Dep) {
         const id = dep.id
-        if (!this.newDepIds.has(id)) {
+
+        if (!this.newDepIds.has(id)) { // newDepIds用于一次求值时避免重复收集依赖
             this.newDepIds.add(id)
             this.newDeps.push(dep)
-            if (!this.depIds.has(id)) {
+            if (!this.depIds.has(id)) { // depIds用于多次求值时避免重复收集依赖
                 dep.addSub(this)
             }
         }
@@ -196,8 +197,10 @@ export default class Watcher {
      * Scheduler job interface.
      * Will be called by the scheduler.
      */
+    // 真正的更新变化操作是在run方法中完成的
     run() {
         if (this.active) {
+            // 由于渲染函数 updateComponent执行后永远返回undefined所以渲染函数重新求值后不会执行if代码块里的代码
             const value = this.get()
             if (
                 value !== this.value ||
