@@ -58,6 +58,7 @@ Vue.prototype.$mount = function (
   hydrating?: boolean
 ): Component {
   el = el && inBrowser ? query(el) : undefined
+  // el为元素 作为模版的挂载点 组件挂载的占位，它将会被组件自身的模板 替换掉
   return mountComponent(this, el, hydrating)
 }
 

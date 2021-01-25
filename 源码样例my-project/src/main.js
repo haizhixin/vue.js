@@ -8,8 +8,9 @@ Vue.config.productionTip = false
 
 /* eslint-disable no-new */
 new Vue({
-  el: '#app',
+  el: "#app",//确定挂载点 被render 和 template最终生成的dom元素替换
   router,
   components: { App },
   template: '<App/>'
+//   render:h=>h('h1', '一则头条')
 })

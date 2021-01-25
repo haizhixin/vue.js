@@ -34,11 +34,11 @@ export default class Watcher {
     sync: boolean;
     dirty: boolean;
     active: boolean;
-    deps: Array < Dep > ;
-    newDeps: Array < Dep > ;
+    deps: Array<Dep>;
+    newDeps: Array<Dep>;
     depIds: SimpleSet;
     newDepIds: SimpleSet;
-    before: ? Function;
+    before: ?Function;
     getter: Function;
     value: any;
 
@@ -53,8 +53,8 @@ export default class Watcher {
         vm: Component,
         expOrFn: string | Function,
         cb: Function,
-        options ? : ? Object,
-        isRenderWatcher ? : boolean
+        options?: ?Object,
+        isRenderWatcher?: boolean
     ) {
         this.vm = vm
         if (isRenderWatcher) {
@@ -108,9 +108,6 @@ export default class Watcher {
     // this.lazy = true;
     // this.getter = Bfn;
     // this.value = undefined;
-
-
-
     /**
      * Evaluate the getter, and re-collect dependencies.
      */
@@ -179,15 +176,15 @@ export default class Watcher {
      * Will be called when a dependency changes.
      */
     update() {
-            /* istanbul ignore else */
-            if (this.lazy) {
-                this.dirty = true
-            } else if (this.sync) {
-                this.run()
-            } else {
-                queueWatcher(this)
-            }
+        /* istanbul ignore else */
+        if (this.lazy) {
+            this.dirty = true
+        } else if (this.sync) {
+            this.run()
+        } else {
+            queueWatcher(this)
         }
+    }
 
     /**
      * Scheduler job interface.
