@@ -1,6 +1,7 @@
 <template>
   <div id="app">
-    <div>{{ a }}</div>
+    <div>{{ compA }}</div>
+    <router-view />
   </div>
 </template>
 
@@ -9,14 +10,14 @@ export default {
   name: "App",
   data() {
     return {
-      a: 3,
+      a: 1,
     };
   },
-  // computed: {
-  //   compA() {
-  //     return this.a + 1;
-  //   },
-  // },
+  computed: {
+    compA() {
+      return this.a + 1;
+    },
+  },
 };
 </script>
 

@@ -1,11 +1,8 @@
 // crateCompileToFunctionFn返回一个compileToFunctions函数
-export function createCompileToFunctionFn(compile: Function): Function {
-
+function createCompileToFunctionFn(compile) {
     // 创建一个不含原型链的空对象用于储存缓存想信息
     const cache = Object.create(null)
-
     return function compileToFunctions(template, options, vm) {
-
         const compiled = compile(template, options)
         // compile对象 包含两个属性 errors tips 均为数组 包含了模版编译过程中的错误和提示信息
         // turn code into functions
@@ -25,11 +22,8 @@ export function createCompileToFunctionFn(compile: Function): Function {
 }
 
 
-
-
 // 此处应用函数柯里化 把多元函数转化为一元函数
-export function createCompilerCreator(baseCompile) {
-
+function createCompilerCreator(baseCompile) {
     return function createCompiler(baseOptions) {
         // 定义了compile函数 //接收两个参数
         // 一,template模版字符串。二,选项参数
@@ -81,4 +75,27 @@ const createCompiler = createCompilerCreator(
 
 
 const { compile, compileToFunctions } = createCompiler(baseOptions)
+// 模板编译器转化为渲染函数
 const { render, staticRenderFns } = compileToFunctions(template, {})
+
+
+
+function createCompilerCreateor(baseCompile: Function) {
+
+    return function createCompiler(baseOptions: Object) { //各个平台下调用createCompiler
+
+        return function createCompileToFunctionFn(compile: Function) {
+            return function compileToFunctions(template, options, vm) {
+                const res = {} // 定义一个空对象也是最终的返回值
+                res.render = createFunction(compiled.render, fnGenErrors)
+                // staticRenderFns是一个渲染函数优化
+                res.staticRenderFns = compiled.staticRenderFns.map(code => {
+                    return createFunction(code, fnGenErrors)
+                })
+                return res
+            }
+
+        }
+    }
+
+}

@@ -156,7 +156,7 @@ export function defineReactive(
 ) {
     const dep = new Dep()
     //判断该字段是否是可配置的，如果不可配置 那么直接 return
-    // 这么做也是合理的，因为一个不可配置的属性是不能使用也没必要使用 
+    // 这么做也是合理的，因为一个不可配置的属性是不能使用也没必要使用
     // Object.defineProperty 改变其属性定义的。
     const property = Object.getOwnPropertyDescriptor(obj, key)
     if (property && property.configurable === false) {
@@ -189,7 +189,7 @@ export function defineReactive(
     //   }
 
     //   需要注意的是，属性 a 闭包引用的 childOb 实际上就是 data.a.__ob__。而属性 b 闭包引用的 childOb 是 undefined，因为属性 b 是基本类型值，并不是对象也不是数组。
-      
+
 
 
     let childOb = !shallow && observe(val)

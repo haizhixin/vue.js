@@ -1,12 +1,10 @@
 /* @flow */
-
 import { extend } from 'shared/util'
 import { detectErrors } from './error-detector'
 import { createCompileToFunctionFn } from './to-function'
 
 // 此处应用函数柯里化 把多元函数转化为一元函数
 export function createCompilerCreator(baseCompile: Function): Function {
-
     return function createCompiler(baseOptions: CompilerOptions) {
         // 定义了compile函数 //接收两个参数
         // 一,template模版字符串。二,选项参数
@@ -94,7 +92,6 @@ export function createCompilerCreator(baseCompile: Function): Function {
             compiled.tips = tips
             return compiled
         }
-
         //返回一个对象 包含 compile函数本身和compileToFunctions函数
         return {
             compile,
