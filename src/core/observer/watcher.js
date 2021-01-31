@@ -98,6 +98,7 @@ export default class Watcher {
                 )
             }
         }
+        // 对于计算属性的Watcher在实例化时不会立即进行求值 除此之外 其他的Watcher在实例化时会对其立即求值
         this.value = this.lazy ?
             undefined :
             this.get()
@@ -111,12 +112,14 @@ export default class Watcher {
     /**
      * Evaluate the getter, and re-collect dependencies.
      */
+
+    // 依赖收集的过程
     get() {
         pushTarget(this)
         let value
         const vm = this.vm
         try {
-            value = this.getter.call(vm, vm)
+            value = this.getter.call(vm, vm) // getter为渲染函数 或者parsePath返回的求值函数 //次函数执行会触发 该属性的get()方法
         } catch (e) {
             if (this.user) {
                 handleError(e, vm, `getter for watcher "${this.expression}"`)
@@ -141,10 +144,10 @@ export default class Watcher {
     addDep(dep: Dep) {
         const id = dep.id
 
-        if (!this.newDepIds.has(id)) {// newDepIds用于一次求值时避免重复收集依赖
+        if (!this.newDepIds.has(id)) { // newDepIds用于一次求值时避免重复收集依赖
             this.newDepIds.add(id)
             this.newDeps.push(dep)
-            if (!this.depIds.has(id)) {// depIds用于多次求值时避免重复收集依赖
+            if (!this.depIds.has(id)) { // depIds用于多次求值时避免重复收集依赖
                 dep.addSub(this)
             }
         }
@@ -175,6 +178,7 @@ export default class Watcher {
      * Subscriber interface.
      * Will be called when a dependency changes.
      */
+    // 触发依赖的过程
     update() {
         /* istanbul ignore else */
         if (this.lazy) {
@@ -248,10 +252,12 @@ export default class Watcher {
             // this is a somewhat expensive operation so we skip it
             // if the vm is being destroyed.
             if (!this.vm._isBeingDestroyed) {
+                //将该观察者实例从当前组件中的watchers移除
                 remove(this.vm._watchers, this)
             }
             let i = this.deps.length
             while (i--) {
+                //将当前观察者实例从属性的dep实例中清除
                 this.deps[i].removeSub(this)
             }
             this.active = false
