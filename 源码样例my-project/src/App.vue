@@ -1,7 +1,7 @@
  <template >
 
 <div id="app22">
-   张三和李四s {{name}}
+   张三和李四s {{name}}{{name1}}
     <!-- <router-view/> -->
   </div>
 
@@ -13,21 +13,29 @@ export default {
   name: "App",
   data() {
     return {
-        name:"王五",
-        t1:"",
-        t2:""
+        name1:"王五",
+        t1:1,
+        t2:2
       
     };
+  },
+  computed: {
+    name() {
+      return this.t1+this.t2;
+    },
   },
   beforCreate() {
       console.log("beforeCreate")
 
   },
   created() {
-      this.name = 2
+    //   this.name = 2
    console.log("created")
-   this.t1 = Date.now()
-
+//    this.t1 = Date.now()
+//     Promise.resolve().then(()=>{
+//        console.log("数据改变")
+//        this.name = 2
+//    })
 
   },
   beforeMount() {
@@ -35,15 +43,18 @@ export default {
    
   },
   mounted() {
-      this.t2 = Date.now()
+    //   this.t2 = Date.now()
 
-      console.log((this.t2-this.t1)/1000)
+    //   console.log((this.t2-this.t1)/1000)
    console.log("mounted")
+
+   setTimeout(()=>{
+       this.name1="3333"
+     this.t1 =1;
+     this.t2 =2;
+   },5000)
    
-//     Promise.resolve().then(()=>{
-//        console.log("数据改变")
-//        this.name = 2
-//    })
+
    
    
   },
