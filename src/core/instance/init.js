@@ -40,6 +40,8 @@ export function initMixin(Vue: Class < Component > ) {
             initInternalComponent(vm, options)
         } else {
             // 挂载实例属性$options
+
+            // 把Vue构造函数的options和传入的options合并挂载到vm.$options上
             vm.$options = mergeOptions(
                 resolveConstructorOptions(vm.constructor), // vm.constructor就是Vue构造函数 但是当时通过Vue.extend()构造的子组件 vm.constructor指向 子类构造函数
                 options || {}, // 实例化时传过来的参数
