@@ -1,7 +1,7 @@
  <template >
 
 <div id="app22">
-   张三和李四s {{name}}{{name1}}
+   张三和李四s {{name}}
     <!-- <router-view/> -->
   </div>
 
@@ -14,16 +14,17 @@ export default {
   data() {
     return {
         name1:"王五",
+        name:"ee",
         t1:1,
         t2:2
       
     };
   },
-  computed: {
-    name() {
-      return this.t1+this.t2;
-    },
-  },
+//   computed: {
+//     name() {
+//       return this.t1+this.t2;
+//     },
+//   },
   beforCreate() {
       console.log("beforeCreate")
 
@@ -48,11 +49,15 @@ export default {
     //   console.log((this.t2-this.t1)/1000)
    console.log("mounted")
 
-   setTimeout(()=>{
-       this.name1="3333"
-     this.t1 =1;
-     this.t2 =2;
-   },5000)
+//    setTimeout(()=>{
+//        this.name1="3333"
+//      this.t1 =1;
+//      this.t2 =2;
+//    },5000)
+Promise.resolve().then(()=>{
+       console.log("数据改变")
+       this.name = 2
+   })
    
 
    
